@@ -1,5 +1,6 @@
 package ca.umanitoba.cs.veranyan.output;
 
+import ca.umanitoba.cs.veranyan.model.Profile;
 import ca.umanitoba.cs.veranyan.model.map.Map;
 import com.google.common.base.Preconditions;
 
@@ -15,9 +16,9 @@ public class MapPrinter {
     private static final int METERS_PER_STEP = 10;
 
     // symbols to display on grid
-    public static final String OBSTACLE = "*";
-    public static final String EMPTY = ".";
-    public static final String ROUTE = ">";
+    public static final String OBSTACLE_SLOT = "*";
+    public static final String EMPTY_SLOT = ".";
+    public static final String ROUTE_SLOT = ">";
 
     private final Map map;
 
@@ -31,120 +32,111 @@ public class MapPrinter {
         checkMapPrinter();
     }
 
-    /**
-     * Prints the Map and all its Activities. This method prints to standard output (`System.out`).
-     * @param summarise true if summed distance of all routes is to be printed, false otherwise
-     */
-    public void print(boolean summarise){
+    public void print() {
         checkMapPrinter();
 
         System.out.println("Legend:");
         System.out.printf("Grid layout: %dx%d.\n", map.getWidth(), map.getLength());
-        System.out.println("Obstacle coordinate: " + OBSTACLE);
-        System.out.println("Route coordinate: " + ROUTE);
-        System.out.println("Empty coordinate: " + EMPTY);
+        System.out.println("Obstacle coordinate: " + OBSTACLE_SLOT);
+        System.out.println("Route coordinate: " + ROUTE_SLOT);
+        System.out.println("Empty coordinate: " + EMPTY_SLOT);
 
         /*
         calculating largest number of digits for both x- and y-coordinates
         in order to use for indenting and proper output formatting.
          */
 
-        int maxXLen;
-        if(map.getWidth() > 9)
-            maxXLen = (int) Math.log10(map.getWidth() - 1) + 1; // the number of digits in the largest x-coordinate
-        else{ // map width 1 crash prevention
-            maxXLen = 1;
+        int maxYLen; //
+        if (map.getWidth() > 9)
+            //
+            maxYLen = (int) Math.log10(map.getWidth() - 1) + 1; // the number of digits in the largest x-coordinate
+        else { // map width 1 crash prevention
+            maxYLen = 1;//
         }
 
-        int maxYLen;
-        if(map.getLength() > 9)
-            maxYLen = (int) Math.log10(map.getLength() - 1) + 1; // the number of digits in the largest y-coordinate
+        int maxXLen; //
+        if (map.getLength() > 9)
+            //
+            maxXLen = (int) Math.log10(map.getLength() - 1) + 1; // the number of digits in the largest y-coordinate
         else { // map length 1 crash prevention
-            maxYLen = 1;
+            maxXLen = 1; //
         }
 
-        // printing x-coordinates
-        System.out.printf("%" + (maxYLen+1) + "s", ""); // indent for y-coordinate
-        for(int i = 0; i < map.getWidth(); i++)
-            System.out.printf(" %" + maxXLen + "d", i);
+        // printing y-coordinates
+        System.out.printf("%" + (maxXLen + 1) + "s", ""); // indent for y-coordinate
+        for (int y = 1; y <= map.getWidth(); y++)
+            System.out.printf(" %" + maxYLen + "d", y);
         System.out.println();
 
-        for (int y = 0; y < map.getLength(); y++){ // y-coordinates
-            System.out.printf("%" + maxYLen + "d|", y); // printing the y-coordinate
+        for (int x = 1; x <= map.getLength(); x++) { // x-coordinates
+            System.out.printf("%" + maxXLen + "d|", x); // printing the x-coordinate
 
-            for (int x = 0; x < map.getWidth(); x++){ // x-coordinates
-                if(map.isInObstacle(x, y)) // searches in all obstacles
-                    System.out.printf(" %" + maxXLen + "s", OBSTACLE);
-                else if(map.isInRoute(x, y)) // searches in all activities
-                    System.out.printf(" %" + maxXLen + "s", ROUTE);
-                else System.out.printf(" %" + maxXLen + "s", EMPTY);
+            for (int y = 1; y <= map.getWidth(); y++) { // y-coordinates
+                switch (map.getCoordinateType(x, y)) {
+                    case ROUTE -> System.out.printf(" %" + maxYLen + "s", ROUTE_SLOT);
+                    case OBSTACLE -> System.out.printf(" %" + maxYLen + "s", OBSTACLE_SLOT);
+                    case EMPTY -> System.out.printf(" %" + maxYLen + "s", EMPTY_SLOT);
+                }
             }
             System.out.println();
         }
-        System.out.println();
 
-        if(summarise) {
-            // printing Activity distance summary for week and month
-            LocalDate today = LocalDate.now();
-            int numStepsWeek = map.getTotalNumSteps(today, ChronoUnit.WEEKS);
-            int numStepsMonth = map.getTotalNumSteps(today, ChronoUnit.MONTHS);
+//        printWithBorders();
+    }
 
-            System.out.println("This week, you have cycled for " + (numStepsWeek * METERS_PER_STEP) + " meters.");
-            System.out.println("This month, you have cycled for " + (numStepsMonth * METERS_PER_STEP) + " meters.");
+    // FIXME
+    public void printWithBorders(){
+        int maxYLen; //
+        if (map.getWidth() > 9)
+            //
+            maxYLen = (int) Math.log10(map.getWidth() - 1) + 1; // the number of digits in the largest x-coordinate
+        else { // map width 1 crash prevention
+            maxYLen = 1;//
         }
 
-        checkMapPrinter();
+        int maxXLen; //
+        if (map.getLength() > 9)
+            //
+            maxXLen = (int) Math.log10(map.getLength() - 1) + 1; // the number of digits in the largest y-coordinate
+        else { // map length 1 crash prevention
+            maxXLen = 1; //
+        }
+
+        System.out.printf("%" + (maxXLen + 1) + "s", ""); // indent for y-coordinate
+        for (int i = 0; i < map.getWidth() + 2; i++)
+            System.out.printf(" %" + maxYLen + "d", i);
+        System.out.println();
+
+        for(int x = 0; x < map.getLength() + 2; x++){
+            System.out.printf("%" + maxXLen + "d|", x); // printing the y-coordinate
+
+            for(int y = 0; y < map.getWidth() + 2; y++){
+                switch (map.getCoordinateType(x, y)) {
+                    case ROUTE -> System.out.printf(" %" + maxYLen + "s", ROUTE_SLOT);
+                    case OBSTACLE -> System.out.printf(" %" + maxYLen + "s", OBSTACLE_SLOT);
+                    case EMPTY -> System.out.printf(" %" + maxYLen + "s", EMPTY_SLOT);
+                    case BORDER -> System.out.printf(" %" + maxYLen + "s", "X");
+                }
+            }
+            System.out.println();
+        }
     }
 
     /**
-     * Prints the Map and its Activity at index. This method prints to standard output (`System.out`).
-     * @param index the index of the Activity to be printed on the grid.
+     * Prints the Map and all its Activities. This method prints to standard output (`System.out`).
+     * @param profile the profile for which to summarise info. Must not be {@code null}.
      */
-    public void print(int index){
-        System.out.println("Legend:");
-        System.out.printf("Grid layout: %dx%d.\n", map.getWidth(), map.getLength());
-        System.out.println("Obstacle coordinate: " + OBSTACLE);
-        System.out.println("Route coordinate: " + ROUTE);
-        System.out.println("Empty coordinate: " + EMPTY);
-
-        /*
-        calculating largest number of digits for both x- and y-coordinates
-        in order to use for indenting and proper output formatting.
-         */
-
-        int maxXLen;
-        if(map.getWidth() > 9)
-            maxXLen = (int) Math.log10(map.getWidth() - 1) + 1; // the number of digits in the largest x-coordinate
-        else{ // map width 1 crash prevention
-            maxXLen = 1;
-        }
-
-        int maxYLen;
-        if(map.getLength() > 9)
-            maxYLen = (int) Math.log10(map.getLength() - 1) + 1; // the number of digits in the largest y-coordinate
-        else { // map length 1 crash prevention
-            maxYLen = 1;
-        }
-
-        // printing x-coordinates
-        System.out.printf("%" + (maxYLen+1) + "s", ""); // indent for y-coordinate
-        for(int i = 0; i < map.getWidth(); i++)
-            System.out.printf(" %" + maxXLen + "d", i);
+    public void print(Profile profile){
+        print();
         System.out.println();
 
-        for (int j = 0; j < map.getLength(); j++){ // y-coordinates
-            System.out.printf("%" + maxYLen + "d|", j); // printing the y-coordinate
+        // printing Activity distance summary for week and month
+        LocalDate today = LocalDate.now();
+        int numStepsWeek = profile.getTotalNumSteps(today, ChronoUnit.WEEKS);
+        int numStepsMonth = profile.getTotalNumSteps(today, ChronoUnit.MONTHS);
 
-            for (int i = 0; i < map.getWidth(); i++){ // x-coordinates
-                if(map.isInObstacle(i, j)) // searches in all obstacles
-                    System.out.printf(" %" + maxXLen + "s", OBSTACLE);
-                else if(map.isInRoute(index, i, j)) // searches in Activity at index
-                    System.out.printf(" %" + maxXLen + "s", ROUTE);
-                else System.out.printf(" %" + maxXLen + "s", EMPTY);
-            }
-            System.out.println();
-        }
-        System.out.println();
+        System.out.println("This week, you have cycled for " + (numStepsWeek * METERS_PER_STEP) + " meters.");
+        System.out.println("This month, you have cycled for " + (numStepsMonth * METERS_PER_STEP) + " meters.");
 
         checkMapPrinter();
     }

@@ -4,7 +4,7 @@ import ca.umanitoba.cs.veranyan.model.Profile;
 import com.google.common.base.Preconditions;
 
 public class ProfilePrinter {
-    private Profile profile;
+    private final Profile profile;
 
     public ProfilePrinter(Profile profile){
         this.profile = profile;

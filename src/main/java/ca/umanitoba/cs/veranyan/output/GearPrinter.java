@@ -1,6 +1,5 @@
 package ca.umanitoba.cs.veranyan.output;
 
-import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.gear.Gear;
 import com.google.common.base.Preconditions;
 
@@ -26,8 +25,8 @@ public class GearPrinter {
     public void print(){
         checkGearPrinter();
 
-        System.out.print("Gear " + gear.name() + " of type "  + gear.type() +
-                " | average speed = " + gear.avgSpeed() + " meters per second.");
+        System.out.print("Gear " + gear.getName() + " of getType "  + gear.getType() +
+                " | average speed = " + gear.getAvgSpeed() + " meters per second.");
 
         checkGearPrinter();
     }
