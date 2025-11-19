@@ -1,14 +1,18 @@
-package ca.umanitoba.cs.veranyan.assets;
+package ca.umanitoba.cs.veranyan.model.assets;
 
 import com.google.common.base.Preconditions;
 
+/**
+ * LinkedList implementation of the {@link Stack} interface
+ * @param <T>
+ */
 public class LinkedListStack<T> implements Stack<T> {
     private final T placeholder;
     private Node top;
     private int size;
 
     /**
-     * Constructor for Stack
+     * Constructor for stack
      * @param placeholder the placeholder value for the dummy node
      */
     public LinkedListStack(T placeholder){
@@ -30,6 +34,8 @@ public class LinkedListStack<T> implements Stack<T> {
 
         top = new Node(top, item);
         size++;
+
+        checkLinkedListStack();
     }
 
     /**
@@ -50,25 +56,10 @@ public class LinkedListStack<T> implements Stack<T> {
         this.top = this.top.next;
         size--;
 
+        checkLinkedListStack();
+
         return popped.data;
     }
-
-     // TODO get rid of this
-     @Override
-     public String toString() {
-         var builder = new StringBuilder();
-         builder.append("");
-
-         Node currNode = top;
-
-         System.out.println("size: " + size);
-         while(!currNode.data.equals(placeholder)){
-             builder.append(currNode.data).append("\n");
-             currNode = currNode.next;
-         }
-
-         return builder.toString();
-     }
 
     /**
      * Peeks the top of the stack without popping
@@ -99,21 +90,30 @@ public class LinkedListStack<T> implements Stack<T> {
         return (size == 0);
     }
 
+    /**
+     * Invariants for {@link LinkedListStack}
+     */
     private void checkLinkedListStack(){
+        Preconditions.checkNotNull(placeholder, "placeholder cannot be null");
         Preconditions.checkNotNull(top, "top cannot be null");
         Preconditions.checkState(size >= 0, "size cannot be negative");
     }
 
+    /**
+     * Inner {@link Node} class to for the {@link LinkedListStack}
+     */
     private class Node{
         Node next;
         T data;
 
         /**
-         * Constructor for placeholder node
+         * Constructor for placeholder {@link Node}
          */
         public Node(){
             this.next = this;
             this.data = placeholder;
+
+            checkNode();
         }
 
         public Node(Node next, T data){
@@ -123,8 +123,13 @@ public class LinkedListStack<T> implements Stack<T> {
             checkNode();
         }
 
+        /**
+         * Class invariants for {@link Node}
+         */
         private void checkNode(){
+            Preconditions.checkNotNull(placeholder, "placeholder cannot be null");
             Preconditions.checkNotNull(next, "next cannot be null");
+            Preconditions.checkNotNull(data, "data cannot be null");
         }
     }
 }

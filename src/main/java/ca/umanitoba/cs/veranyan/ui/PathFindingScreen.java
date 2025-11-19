@@ -1,8 +1,8 @@
 package ca.umanitoba.cs.veranyan.ui;
 
+import ca.umanitoba.cs.veranyan.logic.exceptions.EndCoordOutOfBoundsException;
+import ca.umanitoba.cs.veranyan.logic.exceptions.StartCoordOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.logic.PathFinder;
-import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
-import ca.umanitoba.cs.veranyan.model.map.Map;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.Coordinate;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
 import ca.umanitoba.cs.veranyan.output.Colourise;
@@ -10,7 +10,6 @@ import ca.umanitoba.cs.veranyan.output.MapPrinter;
 import com.google.common.base.Preconditions;
 
 import java.util.InputMismatchException;
-import java.util.Optional;
 import java.util.Scanner;
 
 /**
@@ -21,29 +20,30 @@ public class PathFindingScreen {
     private static final int OWN = 1;
 
     private final PathFinder pathFinder;
-    private final Scanner keyboard = new Scanner(System.in);
+    private final Scanner keyboard;
 
-    public PathFindingScreen(PathFinder pathFinder){
+    public PathFindingScreen(PathFinder pathFinder, Scanner scanner){
         this.pathFinder = pathFinder;
+        this.keyboard = scanner;
 
         checkPathFindingScreen();
     }
 
     /**
      * Starts the route-finding UI flow
-     * @return the route, if found
      */
-    public Optional<Map.ProcessedRoute> startFind(){
+    public void startFind(){
         checkPathFindingScreen();
 
-        Optional<Map.ProcessedRoute> route = Optional.empty();
         int choice = pathFindConfigPrompt();
 
         Coordinate start;
         Coordinate end;
 
-        boolean canStartSeach = true;
+        boolean canStartSeach;
         do {
+            canStartSeach = true;
+
             pathFinder.getMap().clearRoutes();
             new MapPrinter(pathFinder.getMap()).print();
 
@@ -51,39 +51,38 @@ public class PathFindingScreen {
             end = coordinateInsertionScreen();
 
             try {
-                route = pathFinder.findPath(start, end, choice != OWN);
-            } catch (CoordinateOutOfBoundsException e) {
-                Colourise.red("The starting and ending coordinates were out of bounds of the map.\n");
+                boolean isFound = pathFinder.findPath(start, end, choice != OWN);
+
+                if(isFound){
+                    new MapPrinter(pathFinder.getMap()).print();
+                    System.out.printf("Here's the route between (%d, %d) and (%d, %d), shown in the map above.%n",
+                            start.x(), start.y(), end.x(), end.y());
+                }
+                else{
+                    System.out.printf("There is no route between points (%d, %d) and (%d, %d).%n",
+                            start.x(), start.y(), end.x(), end.y());
+                }
+            } catch (StartCoordOutOfBoundsException e) {
+                Colourise.red("(" + start.x() + ", " + start.y() + ")" + " is out of bounds of a map\n");
+                Colourise.red("with length " + pathFinder.getMap().getLength() + " and width " + pathFinder.getMap().getWidth() + ".\n");
+                Colourise.red("A valid coordinate is one that's within map boundaries.\n");
+
+                canStartSeach = false;
+            } catch (EndCoordOutOfBoundsException e) {
+                Colourise.red("(" + end.x() + ", " + end.y() + ")" + " is out of bounds of a map\n");
+                Colourise.red("with length " + pathFinder.getMap().getLength() + " and width " + pathFinder.getMap().getWidth() + ".\n");
                 Colourise.red("A valid coordinate is one that's within map boundaries.\n");
 
                 canStartSeach = false;
             }
         } while (!canStartSeach);
 
-        if(route.isPresent()){
-            new MapPrinter(pathFinder.getMap()).print();
-
-            // fixme
-            System.out.println("Here's the route that was found.");
-            System.out.println("Enter 1 to select route or 0 to quit: ");
-            choice = keyboard.nextInt();
-
-            if(choice == 0)
-                route = Optional.empty();
-        }
-        else{
-            System.out.printf("There is no route between points (%d, %d) and (%d, %d).%n",
-                    start.x(), start.y(), end.x(), end.y());
-        }
-
         checkPathFindingScreen();
-
-        return route;
     }
 
     /**
-     * Prompts the user to insert a coordinate to participate in the route search
-     * @return the inserted coordinate
+     * Prompts the user to insert a {@link Coordinate} to participate in the {@link ca.umanitoba.cs.veranyan.model.map.Route} search
+     * @return the inserted {@link Coordinate}
      */
     private Coordinate coordinateInsertionScreen(){
         checkPathFindingScreen();
@@ -92,12 +91,12 @@ public class PathFindingScreen {
 
         do {
             try {
-                System.out.println("Enter the x-coordinate: ");
+                Colourise.cyan("Enter the x-coordinate: ");
                 x = keyboard.nextInt();
             }
             catch(InputMismatchException e){
                 Colourise.red("Invalid x-coordinate.\n");
-                Colourise.red("A valid input must be a number, e.g. -1.");
+                Colourise.red("You must enter a whole number, e.g. 1.\n");
 
                 x = null;
             }
@@ -106,16 +105,17 @@ public class PathFindingScreen {
 
         do {
             try {
-                System.out.println("Enter the y-coordinate: ");
+                Colourise.cyan("Enter the y-coordinate: ");
                 y = keyboard.nextInt();
             }
             catch(InputMismatchException e){
                 Colourise.red("Invalid y-coordinate.\n");
-                Colourise.red("A valid input must be a number, e.g. -1.");
+                Colourise.red("You must enter a whole number, e.g. 1.\n");
 
                 y = null;
             }
             keyboard.nextLine();
+
         } while (y == null);
 
         checkPathFindingScreen();
@@ -124,7 +124,7 @@ public class PathFindingScreen {
     }
 
     /**
-     * Prompts the user to choose configurations for route finding:
+     * Prompts the user to choose configurations for {@link ca.umanitoba.cs.veranyan.model.map.Route} finding:
      * either find only from user's routes, or also from friends' routes
      * @return the configuration choice
      */
@@ -138,13 +138,14 @@ public class PathFindingScreen {
                 choice = keyboard.nextInt();
             }
             catch(InputMismatchException e){
+                Colourise.red("Invalid input.\n");
+                Colourise.red("You must enter a whole number, e.g. 1.\n");
+
                 choice = -1;
             }
 
-            if(choice == -1){
-                Colourise.red("Invalid input.\n");
-                Colourise.red("A valid input must be a number, e.g. -1.");
-            }
+            keyboard.nextLine();
+
         } while (choice == -1);
 
         checkPathFindingScreen();
@@ -153,7 +154,7 @@ public class PathFindingScreen {
     }
 
     /**
-     * Class invariant for PathFindingScreen
+     * Class invariant for {@link PathFinder}
      */
     private void checkPathFindingScreen(){
         Preconditions.checkNotNull(pathFinder, "pathFinder cannot be null");

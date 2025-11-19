@@ -1,37 +1,40 @@
 package ca.umanitoba.cs.veranyan.ui;
 
+import ca.umanitoba.cs.veranyan.logic.exceptions.EmptyProfilesException;
+import ca.umanitoba.cs.veranyan.model.exceptions.BlankNameException;
+import ca.umanitoba.cs.veranyan.logic.exceptions.DuplicateProfileException;
+import ca.umanitoba.cs.veranyan.logic.exceptions.NoNameMatchException;
 import ca.umanitoba.cs.veranyan.logic.ProfileRegistry;
 import ca.umanitoba.cs.veranyan.model.Profile;
-import ca.umanitoba.cs.veranyan.model.exceptions.BlankNameException;
-import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateProfileException;
-import ca.umanitoba.cs.veranyan.model.exceptions.NoNameMatchException;
 import ca.umanitoba.cs.veranyan.output.Colourise;
 import ca.umanitoba.cs.veranyan.output.ProfilePrinter;
 import com.google.common.base.Preconditions;
 
 import java.util.InputMismatchException;
+import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * The {@code LoginDisplay} class manages the UI interaction for logging in to or
+ * The {@link LoginScreen} class manages the UI interaction for logging in to or
  * signing in to the exercise management system.
  */
-public class LoginDisplay {
+public class LoginScreen {
     private static final int LOGIN = 1;
     private static final int SIGNUP = 2;
 
     private final ProfileRegistry profileRegistry;
-    private final Scanner keyboard = new Scanner(System.in);
+    private final Scanner keyboard;
 
-    public LoginDisplay(ProfileRegistry profileRegistry) {
+    public LoginScreen(ProfileRegistry profileRegistry, Scanner scanner) {
         this.profileRegistry = profileRegistry;
+        this.keyboard = scanner;
 
         checkLoginDisplay();
     }
 
     /**
      * Starts the login process.
-     * Guarantees to log in the profile into the system.
+     * Guarantees to log in the {@link Profile} into the system.
      */
     public void startLogin() {
         checkLoginDisplay();
@@ -59,14 +62,9 @@ public class LoginDisplay {
     public void login() {
         checkLoginDisplay();
 
-        if(profileRegistry.isEmpty()){
-            Colourise.red("You have to create a profile to log in.\n");
-        }
-        else{
-            profileRegistry.loadProfile(
-                    promptProfileSelection()
-            );
-        }
+        Optional<Profile> profile = promptProfileSelection();
+
+        profile.ifPresent(profileRegistry::loadProfile);
 
         checkLoginDisplay();
     }
@@ -85,12 +83,7 @@ public class LoginDisplay {
                 candidate = promptProfileInsertion();
                 profileRegistry.addProfile(candidate);
             } catch (final DuplicateProfileException e){
-                Colourise.red("Profile with " + candidate.getName() + " already exists. Enter a getName that does not match with the following profile names:");
-
-                for (var profile : profileRegistry.getProfiles()) {
-                    new ProfilePrinter(profile).print();
-                    System.out.println();
-                }
+                Colourise.red("Profile with name " + candidate.getName() + " already exists. Your profile name must be unique.\n");
 
                 candidate = null;
             }
@@ -117,19 +110,28 @@ public class LoginDisplay {
             Colourise.cyan("Enter a corresponding number: ");
             try{
                 choice = keyboard.nextInt();
-            } catch (final InputMismatchException e){
-                choice = -1;
-            }
 
-            keyboard.nextLine();
-            if(choice != LOGIN && choice != SIGNUP)
-                Colourise.red(String.format(
+                if(choice != LOGIN && choice != SIGNUP) {
+                    Colourise.red(String.format(
                         """
+                        %d is not a valid option.
                         You must enter a number that corresponds to these options:
                         %d. Log in
                         %d. Sign up
                         Valid inputs are: %d and %d.
-                        %n""", LOGIN, SIGNUP, LOGIN, SIGNUP));
+                        %n""", choice, LOGIN, SIGNUP, LOGIN, SIGNUP)
+                    );
+
+                    choice = -1;
+                }
+            } catch (final InputMismatchException e){
+                Colourise.red("Invalid input: you must enter a whole number, e.g. 1\n");
+
+                choice = -1;
+            }
+
+            keyboard.nextLine();
+
         } while(choice == -1);
 
         checkLoginDisplay();
@@ -138,33 +140,39 @@ public class LoginDisplay {
     }
 
     /**
-     * Prompts the user to select an existing profile to sign in
+     * Prompts the user to select an existing {@link Profile} to sign in
+     * @return the {@link Profile} that the user selected, or {@code null} if there are no profiles in the system
      */
-    private Profile promptProfileSelection() {
+    private Optional<Profile> promptProfileSelection() {
         checkLoginDisplay();
 
-        Profile selectedProfile;
-        do {
-            for (var profile : profileRegistry.getProfiles()) {
-                new ProfilePrinter(profile).print();
-                System.out.println();
-            }
+        Optional<Profile> selectedProfile = Optional.empty();
+        try {
+            do {
+                for (var profile : profileRegistry.getProfiles()) {
+                    new ProfilePrinter(profile).print();
+                    System.out.println();
+                }
 
-            String name = "";
-            try {
-                Colourise.cyan("Enter profile name: ");
-                name = keyboard.nextLine();
-                selectedProfile = profileRegistry.getProfile(name);
-            } catch (NoNameMatchException e) {
-                selectedProfile = null;
-                Colourise.red(String.format(
-                        """
-                        The profile %s you provided didn't match with any existing profile.
-                        The name you must enter must be a name of an existing profile.
-                        The profile names are provided below:
-                        """, name));
-            }
-        } while(selectedProfile == null);
+                String name = "";
+                try {
+                    Colourise.cyan("Enter profile name (one of the above): ");
+                    name = keyboard.nextLine().trim();
+                    selectedProfile = Optional.of(profileRegistry.getProfile(name));
+                } catch (NoNameMatchException e) {
+                    Colourise.red(String.format(
+                            """
+                            The profile %s you provided didn't match with any existing profile.
+                            The name you must enter must be a name of an existing profile.
+                            The existing profile names are provided below:
+                            %n""", name));
+
+                    selectedProfile = Optional.empty();
+                }
+            } while (selectedProfile.isEmpty());
+        } catch(EmptyProfilesException e){
+            Colourise.red("There are no existing profiles. You have to create a profile to log in.\n");
+        }
 
         checkLoginDisplay();
 
@@ -172,8 +180,8 @@ public class LoginDisplay {
     }
 
     /**
-     * Prompts the user to create a new profile.
-     * @return the new profile. Must not be {@code null}
+     * Prompts the user to create a new {@link Profile}.
+     * @return the new {@link Profile}. Must not be {@code null}
      */
     private Profile promptProfileInsertion() {
         checkLoginDisplay();
@@ -184,10 +192,11 @@ public class LoginDisplay {
         do {
             try {
                 Colourise.cyan("Enter profile name: ");
-                name = keyboard.next();
+                name = keyboard.nextLine().trim();
+
                 builder.name(name);
             } catch (final BlankNameException e){
-                System.out.println("Name of a profile must contain at least one letter, e.g. Larry");
+                Colourise.red("Name of a profile must contain at least one letter, e.g. Larry\n");
                 name = "";
             }
         } while(name.isBlank());
@@ -198,7 +207,7 @@ public class LoginDisplay {
     }
 
     /**
-     * Class invariants for checkLoginDisplay
+     * Class invariants for {@link LoginScreen}
      */
     private void checkLoginDisplay(){
         Preconditions.checkNotNull(profileRegistry, "profileRegistry cannot be null");

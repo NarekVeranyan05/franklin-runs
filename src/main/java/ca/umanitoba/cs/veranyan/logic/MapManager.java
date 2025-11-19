@@ -1,25 +1,22 @@
 package ca.umanitoba.cs.veranyan.logic;
 
+import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
-import ca.umanitoba.cs.veranyan.model.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.map.Map;
 import ca.umanitoba.cs.veranyan.model.map.Obstacle;
 import ca.umanitoba.cs.veranyan.model.map.Route;
-import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
+import ca.umanitoba.cs.veranyan.model.map.coordinate.Coordinate;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * {@link MapManager} manages the business logic of manipulating map contents
+ */
 public class MapManager {
-    private static final int UP = 1;
-    private static final int RIGHT = 2;
-    private static final int DOWN = 3;
-    private static final int LEFT = 4;
-
     private final Map map;
-    private final List<Map.ProcessedRoute> routesAdded;
-
+    private final List<ProcessedRoute> routesAdded;
 
     public MapManager(Map map){
         this.map = map;
@@ -35,10 +32,10 @@ public class MapManager {
     }
 
     /**
-     * Clears up the map and resets its list of routes to only the provided route.
-     * @param route the route to reset the map to show.
+     * Clears up the {@link Map} and resets its list of routes to only the provided {@link Route}.
+     * @param route the route to reset the {@link Route} to show.
      */
-    public void setUpRoute(Map.ProcessedRoute route) {
+    public void setUpRoute(ProcessedRoute route) {
         Preconditions.checkNotNull(route, "route cannot be null");
         checkMapManager();
 
@@ -48,77 +45,32 @@ public class MapManager {
         checkMapManager();
     }
 
-    public void doMove(Map.ProcessedRoute route, int direction, int numSteps) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
-        Preconditions.checkNotNull(route, "moveIn cannot be null");
-        checkMapManager();
-
-        var currCoord = route.getCoordinates().get(route.getCoordinates().size()-1);
-
-        switch (direction){
-            case UP -> {
-                if(currCoord.x() - numSteps < 1)
-                    throw new CoordinateOutOfBoundsException();
-                for(int i = 1; i <= numSteps; i++){
-                    currCoord = currCoord.getAbove();
-
-                    if(map.getCoordinateType(currCoord.x(), currCoord.y()) == CoordinateType.OBSTACLE)
-                        throw new RouteObstacleOverlapException();
-                }
-
-                route.move(direction, numSteps);
-            }
-            case RIGHT -> {
-                if(currCoord.y() + numSteps > map.getWidth())
-                    throw new CoordinateOutOfBoundsException();
-                for(int i = 1; i <= numSteps; i++){
-                    currCoord = currCoord.getRight();
-
-                    if(map.getCoordinateType(currCoord.x(), currCoord.y()) == CoordinateType.OBSTACLE)
-                        throw new RouteObstacleOverlapException();
-                }
-
-                route.move(direction, numSteps);
-            }
-            case DOWN -> {
-                if(currCoord.x() + numSteps > map.getLength())
-                    throw new CoordinateOutOfBoundsException();
-                for(int i = 1; i <= numSteps; i++){
-                    currCoord = currCoord.getBelow();
-
-                    if(map.getCoordinateType(currCoord.x(), currCoord.y()) == CoordinateType.OBSTACLE)
-                        throw new RouteObstacleOverlapException();
-                }
-
-                route.move(direction, numSteps);
-            }
-            case LEFT -> {
-                if(currCoord.y() - numSteps < 1)
-                    throw new CoordinateOutOfBoundsException();
-                for(int i = 1; i <= numSteps; i++){
-                    currCoord = currCoord.getLeft();
-
-                    if(map.getCoordinateType(currCoord.x(), currCoord.y()) == CoordinateType.OBSTACLE)
-                        throw new RouteObstacleOverlapException();
-                }
-
-                route.move(direction, numSteps);
-            }
-        }
-
-        checkMapManager();
-    }
-
-    public Map.ProcessedRoute addRoute(Route route) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
+    /**
+     * Adds a new {@link Route} to the {@link Map}
+     * @param route the {@link Route} to add
+     * @return the {@link ProcessedRoute} that wraps the successfully added {@link Route}
+     * @throws RouteObstacleOverlapException if there is an {@link Obstacle} that overlaps with the given {@link Route}
+     * @throws CoordinateOutOfBoundsException if the {@link Route} goes out of the {@link Map} boundaries
+     */
+    public ProcessedRoute addRoute(Route route) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
         Preconditions.checkNotNull(route, "route cannot be null");
         checkMapManager();
 
-        var processedRoute = map.addRoute(route);
+        map.addRoute(route);
+        var processedRoute = new ProcessedRoute(route);
         routesAdded.add(processedRoute);
+
         checkMapManager();
 
         return processedRoute;
     }
 
+    /**
+     * Adds a new {@link Obstacle} to the {@link Map}
+     * @param obstacle the {@link Obstacle} to add
+     * @throws RouteObstacleOverlapException if there is a {@link Route} that overlaps with the given {@link Obstacle}
+     * @throws CoordinateOutOfBoundsException if the {@link Obstacle} goes out of the {@link Map} boundaries
+     */
     public void addObstacle(Obstacle obstacle) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
         Preconditions.checkNotNull(obstacle, "obstacle cannot be null");
         checkMapManager();
@@ -127,13 +79,97 @@ public class MapManager {
         map.clearRoutes();
         map.addProcessedRoutes(routesAdded);
 
-
         map.addObstacle(obstacle);
 
         checkMapManager();
     }
 
+    /**
+     * Invariants for {@link MapManager}
+     */
     private void checkMapManager(){
         Preconditions.checkNotNull(map, "map cannot be null");
+    }
+
+    /**
+     * A {@link ProcessedRoute} is a wrapper for a {@link Route} that was successfully added
+     * to the {@link Map}, passing all validation
+     */
+    public static class ProcessedRoute implements Cloneable {
+        Route processedRoute;
+
+        private ProcessedRoute(Route route){
+            Preconditions.checkNotNull(route, "route cannot be null");
+            for(var coord : route.getCoordinates()){
+                Preconditions.checkState(coord.x() >= 1 &&
+                        coord.x() <= Map.getInstance().getLength() &&
+                        coord.y() >= 1 &&
+                        coord.y() <= Map.getInstance().getWidth(), "validated route cannot be out of map bounds");
+
+            }
+            this.processedRoute = route;
+
+            checkProcessedRoute();
+        }
+
+        /**
+         * @return the {@link Route} that's wrapped around
+         */
+        public Route getRoute(){
+            checkProcessedRoute();
+
+            return this.processedRoute;
+        }
+
+        /**
+         * @return the list of coordinates of the {@link Route} that's wrapped around
+         */
+        public List<Coordinate> getCoordinates() {
+            checkProcessedRoute();
+
+            return processedRoute.getCoordinates();
+        }
+
+        /**
+         * @return the measure of the {@link Route} that's wrapped around
+         */
+        public int getMeasure(){
+            checkProcessedRoute();
+
+            return processedRoute.getMeasure();
+        }
+
+        /**
+         * moves in a particular direction for the route
+         * @param direction the direction to move. Must be any of and only of [UP = {@code 1}, RIGHT = {@code 2}, DOWN = {@code 3}, LEFT = {@code 4}].
+         * @param numSteps the number of steps of the move. Must be non-negative.
+         */
+        public void move(int direction, int numSteps) {
+            checkProcessedRoute();
+
+            processedRoute.move(direction, numSteps);
+        }
+
+        public ProcessedRoute clone() {
+            checkProcessedRoute();
+
+            try{
+                ProcessedRoute clone = (ProcessedRoute) super.clone();
+                clone.processedRoute = processedRoute.clone();
+
+                checkProcessedRoute();
+
+                return clone;
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException();
+            }
+        }
+
+        /**
+         * Class Invariants for {@link ProcessedRoute}
+         */
+        private void checkProcessedRoute(){
+            Preconditions.checkNotNull(processedRoute, "processedRoute cannot be null");
+        }
     }
 }

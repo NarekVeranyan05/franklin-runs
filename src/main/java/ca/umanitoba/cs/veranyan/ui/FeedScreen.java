@@ -1,10 +1,8 @@
 package ca.umanitoba.cs.veranyan.ui;
 
+import ca.umanitoba.cs.veranyan.model.exceptions.InvalidGearTypeException;
 import ca.umanitoba.cs.veranyan.logic.MapManager;
 import ca.umanitoba.cs.veranyan.logic.ProfileRegistry;
-import ca.umanitoba.cs.veranyan.logic.assets.RouteFilterType;
-import ca.umanitoba.cs.veranyan.model.Activity;
-import ca.umanitoba.cs.veranyan.model.exceptions.InvalidGearTypeException;
 import ca.umanitoba.cs.veranyan.output.ActivityPrinter;
 import ca.umanitoba.cs.veranyan.output.Colourise;
 import ca.umanitoba.cs.veranyan.output.MapPrinter;
@@ -14,25 +12,23 @@ import com.google.common.base.Preconditions;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Scanner;
-import java.util.SortedSet;
 
 /**
- * The {@code FeedDisplay} class manages displaying the feed and changing filter types,
+ * The {@link FeedScreen} class manages displaying the feed and changing filter types,
  */
-public class FeedDisplay {
+public class FeedScreen {
+    private static final ProfileRegistry.ActivityFilterType DEFAULT_FILTER = ProfileRegistry.ActivityFilterType.OWN_AND_FRIENDS;
     private static final int QUIT = 0;
-    private static final int PREV_PAGE = 1;
-    private static final int NEXT_PAGE = 2;
-    private static final int FILTER = 3;
+    private static final int FILTER = 1;
 
     private final ProfileRegistry profileRegistry;
     private final MapManager mapManager;
     private final Scanner keyboard;
 
-    public FeedDisplay(ProfileRegistry profileRegistry, MapManager mapManager){
+    public FeedScreen(ProfileRegistry profileRegistry, MapManager mapManager, Scanner scanner){
         this.profileRegistry = profileRegistry;
         this.mapManager = mapManager;
-        this.keyboard = new Scanner(System.in);
+        this.keyboard = scanner;
 
         checkFeedDisplay();
     }
@@ -50,19 +46,31 @@ public class FeedDisplay {
             throw new RuntimeException(e);
         }
 
-        var type = RouteFilterType.OWN_AND_FRIENDS;
-        SortedSet<Activity> activities = profileRegistry.getActivities(type);
+        var type = DEFAULT_FILTER;
+        var profileActivityPairs = profileRegistry.getActivities(type);
 
-        int choice = -1;
+        int choice;
         do{
-            if(activities.isEmpty())
+            if(profileActivityPairs.isEmpty())
                 System.out.println("The feed of activities is empty.");
             else {
-                for (var activity : activities) {
-                    mapManager.setUpRoute(activity.getRoute()); // printing only this activity
+                for (var profileActivityPair : profileActivityPairs) {
+                    var profileName = profileActivityPair.getFirst();
+                    var activity = profileActivityPair.getSecond();
 
+                    mapManager.setUpRoute(activity.getRoute()); // will print only this route
+
+                    // printing profile name
+                    System.out.print("Profile: " + profileName);
+                    if(profileName.equals(profileRegistry.getCurrentProfile().getName()))
+                        System.out.print(" (YOU)");
+                    System.out.println();
+
+                    // printing activity
                     new ActivityPrinter(activity).print();
                     System.out.println();
+
+                    // printing route
                     new MapPrinter(mapManager.getMap()).print();
 
                     System.out.println("\n");
@@ -72,7 +80,7 @@ public class FeedDisplay {
             choice = promptNavigationChoice();
             if(choice == FILTER){
                 type = filterSelectionScreen();
-                activities = profileRegistry.getActivities(type);
+                profileActivityPairs = profileRegistry.getActivities(type);
             }
         } while (choice != QUIT);
 
@@ -83,33 +91,40 @@ public class FeedDisplay {
      * Prompts the user to select a filter type.
      * @return the filter type selected.
      */
-    private RouteFilterType filterSelectionScreen() {
+    private ProfileRegistry.ActivityFilterType filterSelectionScreen() {
         checkFeedDisplay();
 
-        RouteFilterType filterType = null;
-        String filterTypeInput = null;
+        ProfileRegistry.ActivityFilterType filterType;
+        String filterTypeInput = "";
 
         do{
             for(var type : Arrays.stream(
-                    RouteFilterType.values()).
-                    filter(val -> val != RouteFilterType.ALL).toList()
+                    ProfileRegistry.ActivityFilterType.values()).
+                    filter(val -> val != ProfileRegistry.ActivityFilterType.ALL).toList()
             )
             {
                 System.out.println(" - " + type.toString());
             }
 
-
-            Colourise.cyan("Enter filter by name: ");
+            Colourise.cyan("Enter filter by number: ");
             try {
-                filterTypeInput = keyboard.nextLine();
-                filterType = RouteFilterType.fromString(filterTypeInput);
+                filterTypeInput = keyboard.nextLine().trim();
+
+                if(!filterTypeInput.equalsIgnoreCase("all"))
+                    filterType = ProfileRegistry.ActivityFilterType.fromString(filterTypeInput);
+                else {
+                    filterType = null;
+                }
+
             } catch (InvalidGearTypeException e) {
-                Colourise.red(filterTypeInput + " is not a valid Gear type. Valid types are one of below: ");
-
-
-                filterTypeInput = null;
+                filterType = null;
             }
-        } while (filterTypeInput == null);
+            
+            if(filterType == null)
+                Colourise.red(filterTypeInput + " is an invalid filter name. Valid filters are one of below:\n");
+
+                
+        } while (filterType == null);
 
         checkFeedDisplay();
 
@@ -125,8 +140,6 @@ public class FeedDisplay {
 
         System.out.println("Select one of the following options:");
         System.out.println(QUIT + ". Quit");
-        System.out.println(PREV_PAGE + ". Previous page");
-        System.out.println(NEXT_PAGE + ". Next page");
         System.out.println(FILTER + ". Filter");
 
         int choice;
@@ -134,21 +147,28 @@ public class FeedDisplay {
             Colourise.cyan("Enter a corresponding number: ");
             try{
                 choice = keyboard.nextInt();
+
+                if(choice != QUIT && choice != FILTER) {
+                    Colourise.red(String.format(
+                        """
+                        %d is not a valid option.
+                        You must enter a number that corresponds to these options:
+                        %d. Quit
+                        %d. Filter
+                        Valid inputs are: %d, %d.
+                        %n""", choice, QUIT, FILTER, QUIT, FILTER)
+                    );
+
+                    choice = -1;
+                }
             } catch (final Exception e){
+                Colourise.red("Invalid input: you must enter a whole number, e.g 1\n");
+
                 choice = -1;
             }
 
             keyboard.nextLine();
-            if(choice != QUIT && choice != PREV_PAGE && choice != NEXT_PAGE && choice != FILTER)
-                Colourise.red(String.format(
-                        """
-                        You must enter a number that corresponds to these options:
-                        %d. Quit
-                        %d. Previous page
-                        %d. Next page
-                        %d. Filter
-                        Valid inputs are: %d, %d, %d, %d.
-                        %n""", QUIT, PREV_PAGE, NEXT_PAGE, FILTER, QUIT, PREV_PAGE, NEXT_PAGE, FILTER));
+
         } while(choice == -1);
 
         checkFeedDisplay();

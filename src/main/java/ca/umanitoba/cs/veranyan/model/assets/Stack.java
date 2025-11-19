@@ -1,4 +1,4 @@
-package ca.umanitoba.cs.veranyan.assets;
+package ca.umanitoba.cs.veranyan.model.assets;
 
 /**
  * This is a generic interface for a stack.

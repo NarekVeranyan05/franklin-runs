@@ -1,6 +1,12 @@
 package ca.umanitoba.cs.veranyan;
 
+import ca.umanitoba.cs.veranyan.logic.MapManager;
+import ca.umanitoba.cs.veranyan.logic.ProfileRegistry;
+import ca.umanitoba.cs.veranyan.logic.RouteManager;
+import ca.umanitoba.cs.veranyan.model.map.Map;
 import ca.umanitoba.cs.veranyan.ui.MainMenu;
+
+import java.util.Scanner;
 
 /**
  * The main class is the exercise-tracking manager
@@ -9,7 +15,19 @@ import ca.umanitoba.cs.veranyan.ui.MainMenu;
  */
 public class Main {
     public static void main(String[] args) {
-        MainMenu mainMenu = new MainMenu();
+        ProfileRegistry profileRegistry = new ProfileRegistry();
+
+        MapManager mapManager = new MapManager(
+                Map.getInstance()
+        );
+
+        RouteManager routeManager = new RouteManager(
+                Map.getInstance()
+        );
+
+        Scanner scanner = new Scanner(System.in);
+
+        MainMenu mainMenu = new MainMenu(profileRegistry, mapManager, routeManager, scanner);
         mainMenu.startProgram();
     }
 }

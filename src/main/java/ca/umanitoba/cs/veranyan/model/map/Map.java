@@ -1,21 +1,23 @@
 package ca.umanitoba.cs.veranyan.model.map;
 
-import ca.umanitoba.cs.veranyan.model.Activity;
-import ca.umanitoba.cs.veranyan.model.Profile;
+import ca.umanitoba.cs.veranyan.logic.MapManager;
+import ca.umanitoba.cs.veranyan.logic.exceptions.DuplicateProfileException;
+import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
-import ca.umanitoba.cs.veranyan.model.exceptions.RouteObstacleOverlapException;
+import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.Coordinate;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
 import com.google.common.base.Preconditions;
+import jdk.jshell.spi.SPIResolutionException;
 
 import java.util.*;
 import java.util.stream.Stream;
 
 /**
- * The Map is the class that contains all the {@link Obstacle}
+ * The {@link Map} is the class that contains all the {@link Obstacle}
  * instances and {@link Route} instances in an {@link Activity}.
  */
-public class Map implements Gridable{
+public class Map{
     private static final int BORDER_INDENT = 1;
     private static final int MAP_WIDTH = 20; // the number of y-coordinates (horizontal axis)
     private static final int MAP_LENGTH = 25; // the number of x-coordinates (vertical axis)
@@ -23,16 +25,9 @@ public class Map implements Gridable{
     private static Map singleton;
 
     private final CoordinateType[][] grid;
-
     private final List<Obstacle> obstacles;
     private final Set<Route> routes;
 
-    /**
-     * The width and length will be used to instantiate a new Map
-     * singleton if the previous singleton has been destroyed.
-     *
-     * @return the new or already-existing Map singleton instance.
-     */
     public static Map getInstance() {
         // create new singleton instance if none exists
         if (singleton == null)
@@ -44,15 +39,12 @@ public class Map implements Gridable{
     }
 
     /**
-     * Destroys the singleton Map instance.
+     * Destroys the singleton {@link Map} instance.
      */
     public static void destroyInstance(){
         singleton = null;
     }
 
-    /**
-     * Constructor for a new Map singleton.
-     */
     private Map() {
         this.obstacles = new ArrayList<>();
         this.routes = new HashSet<>();
@@ -67,24 +59,26 @@ public class Map implements Gridable{
     /**
      * @return the width (which is the number of y-coordinates) of the grid;
      */
-    @Override
     public int getWidth() {
+        checkMap();
+
         return MAP_WIDTH;
     }
 
     /**
      * @return the length (which is the number of x-coordinates) of the grid
      */
-    @Override
     public int getLength() {
+        checkMap();
+
         return MAP_LENGTH;
     }
 
     /**
      * @param x the non-negative x-component of the point (x, y)
      * @param y the non-negative y-component of the point (x, y)
-     * @return the coordinate getType of the point (x, y) on the map <br>EMPTY if empty, <br>ROUTE if occupied by route,
-     * <br>OBSTACLE if occupied by obstacle.
+     * @return the coordinate type of the point (x, y) on the {@link Map} <br>{@code EMPTY} if empty, <br>{@code ROUTE} if occupied by a {@link Route},
+     * <br>{@code OBSTACLE} if occupied by an {@link Obstacle}.
      * <br>Must not be {@code null}.
      */
     public CoordinateType getCoordinateType(int x, int y){
@@ -93,7 +87,15 @@ public class Map implements Gridable{
         return grid[x][y];
     }
 
+    /**
+     * Sets the coordinate type of particular coordinate on the grid
+     * @param type the coordinate type to set
+     * @param x the x-coordinate
+     * @param y the y-coordinate
+     */
     public void setCoordinateType(CoordinateType type, int x, int y){
+        Preconditions.checkState(x >= 1 && x <= Map.MAP_LENGTH, "x coordinate must be within map bounds");
+        Preconditions.checkState(y >= 1 && y <= MAP_WIDTH, "y coordinate must be within map bounds");
         checkMap();
 
         grid[x][y] = type;
@@ -101,44 +103,78 @@ public class Map implements Gridable{
         checkMap();
     }
 
-    public Coordinate getCoordinate(int x, int y) throws CoordinateOutOfBoundsException{
-        checkMap();
-
-        if(x < 1 || x > MAP_LENGTH)
-            throw new CoordinateOutOfBoundsException();
-        if(y < 1 || y > MAP_WIDTH)
-            throw new CoordinateOutOfBoundsException();
-
-        return new Coordinate(grid[x][y], x, y);
+    /**
+     * @return an unmodifiable list of obstacles on the {@link Map}
+     */
+    public List<Obstacle> getObstacles() {
+        return Collections.unmodifiableList(obstacles);
     }
 
-    public ProcessedRoute addRoute(Route route) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
-        for(var coord : route.getCoordinates()) {
-            if(getCoordinateType(coord.x(), coord.y()) == CoordinateType.OBSTACLE)
-                throw new RouteObstacleOverlapException();
+    /**
+     * Adds an {@link Obstacle} to the {@link Map}
+     * @param obstacle the {@link Obstacle} to add
+     * @throws RouteObstacleOverlapException if {@code obstacle} overlaps with any of the existing routes
+     * @throws CoordinateOutOfBoundsException if {@code obstacle} is out of {@link Map} boundaries
+     */
+    public void addObstacle(Obstacle obstacle) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException{
+        Preconditions.checkNotNull(obstacle, "obstacle cannot be null");
+        checkMap();
+
+        for(var coord : obstacle.getCoordinates()) {
             if(coord.x() > MAP_LENGTH || coord.y() > MAP_WIDTH)
                 throw new CoordinateOutOfBoundsException();
+            if(getCoordinateType(coord.x(), coord.y()) == CoordinateType.ROUTE)
+                throw new RouteObstacleOverlapException();
+        }
+
+        obstacles.add(obstacle);
+        appendToGrid(obstacle);
+
+        checkMap();
+    }
+
+    /**
+     * Removes an Obstacle from the Map by index.
+     * @param index the index of the Obstacle to remove.
+     */
+    public void removeObstacle(int index){
+        checkMap();
+
+        obstacles.remove(index);
+        refillGrid();
+
+        checkMap();
+    }
+
+    /**
+     * Adds a {@link Route} to the {@link Map}
+     * @param route the {@link Route} to add
+     * @throws RouteObstacleOverlapException if {@code route} overlaps with any of the existing obstacles
+     * @throws CoordinateOutOfBoundsException if {@code route} is out of {@link Map} boundaries
+     */
+    public void addRoute(Route route) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
+        Preconditions.checkNotNull(route, "route cannot be null");
+        checkMap();
+
+        for(var coord : route.getCoordinates()) {
+            if(coord.x() < 1 || coord.x() > MAP_LENGTH || coord.y() < 1 || coord.y() > MAP_WIDTH)
+                throw new CoordinateOutOfBoundsException();
+            if(getCoordinateType(coord.x(), coord.y()) == CoordinateType.OBSTACLE)
+                throw new RouteObstacleOverlapException();
         }
 
         routes.add(route);
         appendToGrid(route);
 
-        return new ProcessedRoute(route);
+        checkMap();
     }
 
-    public void addObstacle(Obstacle obstacle) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException{
-        for(var coord : obstacle.getCoordinates()) {
-            if(getCoordinateType(coord.x(), coord.y()) == CoordinateType.ROUTE)
-                throw new RouteObstacleOverlapException();
-            if(coord.x() > MAP_LENGTH || coord.y() > MAP_WIDTH)
-                throw new CoordinateOutOfBoundsException();
-        }
-
-        obstacles.add(obstacle);
-        appendToGrid(obstacle);
-    }
-
-    public void addProcessedRoute(ProcessedRoute processedRoute){
+    /**
+     * Adds a {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} to the {@link Map}
+     * @param processedRoute the {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} to add
+     */
+    public void addProcessedRoute(MapManager.ProcessedRoute processedRoute){
+        Preconditions.checkNotNull(processedRoute, "processedRoute cannot be null");
         checkMap();
 
         routes.add(processedRoute.getRoute());
@@ -147,7 +183,13 @@ public class Map implements Gridable{
         checkMap();
     }
 
-    public void addProcessedRoutes(List<ProcessedRoute> processedRoutes){
+    /**
+     * Adds all the {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} objects in the list to the {@link Map}
+     * @param processedRoutes the list of processed routes to add
+     */
+    public void addProcessedRoutes(List<MapManager.ProcessedRoute> processedRoutes){
+        Preconditions.checkNotNull(processedRoutes, "processedRoutes cannot be null");
+        Preconditions.checkState(!processedRoutes.contains(null), "processedRoutes entry cannot be null");
         checkMap();
 
         // feature getType cannot be EMPTY (class invariant checks for it)
@@ -161,44 +203,9 @@ public class Map implements Gridable{
     }
 
     /**
-     * Removes a feature from the map
-     * @param processedRoute the feature to remove
-     */
-    public void removeRoute(ProcessedRoute processedRoute){
-        checkMap();
-
-        routes.remove(processedRoute.getRoute());
-        refillGrid();
-
-        checkMap();
-    }
-
-//    /**
-//     * @return the unmodifiable list of Obstacles on the Map. Must not be {@code null}.
-//     */
-//    public List<MapFeature> getObstacles() {
-//        checkMap();
-//
-//        return Collections.unmodifiableList(obstacles);
-//    }
-//
-//    /**
-//     * @param index the index of an obstacle
-//     * @return the obstacle on the map at given index. Must not be {@code null}.
-//     */
-//    public MapFeature getObstacle(int index) {
-//        checkMap();
-//
-//        var iterator = obstacles.iterator();
-//        for(int i = 0; i < index; i++)
-//            iterator.next();
-//
-//        return iterator.next();
-//    }
-
-    /**
-     * Removes all the routes from the map
-     * Refills the grid leaving no ROUTEs
+     * Removes all the routes from the {@link Map}
+     * Refills the grid leaving no routes
+     * @implNote obstacles are not cleared
      */
     public void clearRoutes(){
         checkMap();
@@ -213,8 +220,8 @@ public class Map implements Gridable{
      * Fills corresponding grid entries to represent the feature
      * @param feature the feature to add to the map grid
      */
-    @Override
     public void appendToGrid(MapFeature feature){
+        Preconditions.checkNotNull(feature, "feature cannot be null");
         checkMap();
 
         for(var coord : feature.getCoordinates())
@@ -223,22 +230,9 @@ public class Map implements Gridable{
         checkMap();
     }
 
-    private void fillGridBorders(){
-        for(int x = 0; x < MAP_LENGTH + 2*BORDER_INDENT; x++) {
-            grid[x][0] = CoordinateType.BORDER;
-            grid[x][MAP_WIDTH + BORDER_INDENT] = CoordinateType.BORDER;
-        }
-
-        for(int y = 1; y < MAP_WIDTH + 2*BORDER_INDENT; y++){
-            grid[0][y] = CoordinateType.BORDER;
-            grid[MAP_LENGTH + BORDER_INDENT][y] = CoordinateType.BORDER;
-        }
-    }
-
     /**
      * Refills the grid using the current collection of features in the map.
      */
-    @Override
     public void refillGrid(){
         checkMap();
 
@@ -256,34 +250,23 @@ public class Map implements Gridable{
         checkMap();
     }
 
-    //FIXME remove
     /**
-     * Prints out the maze grid to the console.
-     *     EMPTY,
-     *     ROUTE,
-     *     OBSTACLE,
-     *     VISITED,
-     *     CURRENT,
-     *     BORDER
+     * fills the grid borders with a corresponding symbol
      */
-    public void printout(){
-        for(int i = 1; i <= getLength(); i++){
-            for(int j = 1; j <= getWidth(); j++) {
-                if (grid[i][j] == CoordinateType.EMPTY)
-                    System.out.print(". ");
-                else if (grid[i][j] == CoordinateType.VISITED)
-                    System.out.print("V ");
-                else if (grid[i][j] == CoordinateType.OBSTACLE)
-                    System.out.print("O ");
-                else if (grid[i][j] == CoordinateType.CURRENT)
-                    System.out.print("U ");
-                else if (grid[i][j] == CoordinateType.ROUTE)
-                    System.out.print("R ");
+    private void fillGridBorders(){
+        checkMap();
 
-            }
-
-            System.out.println();
+        for(int x = 0; x < MAP_LENGTH + 2*BORDER_INDENT; x++) {
+            grid[x][0] = CoordinateType.BORDER;
+            grid[x][MAP_WIDTH + BORDER_INDENT] = CoordinateType.BORDER;
         }
+
+        for(int y = 1; y < MAP_WIDTH + 2*BORDER_INDENT; y++){
+            grid[0][y] = CoordinateType.BORDER;
+            grid[MAP_LENGTH + BORDER_INDENT][y] = CoordinateType.BORDER;
+        }
+
+        checkMap();
     }
 
     /**
@@ -304,7 +287,7 @@ public class Map implements Gridable{
          */
 
         // checks obstacle not null and is within bounds
-        // coordinate being non-negative is an Coordinate invariant
+        // coordinate being non-negative is an Obstacle invariant
         for(var obstacle : obstacles){
             Preconditions.checkNotNull(obstacle, "obstacles entries cannot be null.");
 
@@ -317,7 +300,7 @@ public class Map implements Gridable{
         }
 
         // checks route not null, is within bounds, and does not overlap with any obstacle
-        // coordinate being non-negative is a Coordinate invariant
+        // coordinate being non-negative is a Route invariant
         for(var route : routes){
             Preconditions.checkNotNull(route, "routes entries cannot be null.");
 
@@ -334,52 +317,6 @@ public class Map implements Gridable{
                             "routes and obstacles entries cannot overlap."
                     );
                 }
-            }
-        }
-    }
-
-    public static class ProcessedRoute implements Cloneable{
-        Route processedRoute;
-
-        public ProcessedRoute(Route route){
-            this.processedRoute = route;
-
-            checkProcessedRoute();
-        }
-
-        private Route getRoute(){
-            checkProcessedRoute();
-
-            return this.processedRoute;
-        }
-
-        public List<Coordinate> getCoordinates() {
-            checkProcessedRoute();
-
-            return processedRoute.getCoordinates();
-        }
-
-        public int getMeasure(){
-            checkProcessedRoute();
-
-            return processedRoute.getMeasure();
-        }
-
-        private void checkProcessedRoute(){
-            Preconditions.checkNotNull(processedRoute, "processedRoute cannot be null");
-        }
-
-        public void move(int direction, int numSteps) {
-            processedRoute.move(direction, numSteps);
-        }
-
-        public ProcessedRoute clone() {
-            try{
-                ProcessedRoute clone = (ProcessedRoute) super.clone();
-                clone.processedRoute = processedRoute.clone();
-                return clone;
-            } catch (CloneNotSupportedException e) {
-                throw new RuntimeException();
             }
         }
     }

@@ -4,7 +4,7 @@ import ca.umanitoba.cs.veranyan.model.exceptions.InvalidGearTypeException;
 import com.google.common.base.Preconditions;
 
 /**
- * Types of a {@link Gear} instance to specify Gear characteristics.
+ * Types of a {@link Gear} instance to specify {@link Gear} characteristics.
  */
 public enum GearType {
     ROAD_BIKE,
@@ -13,6 +13,12 @@ public enum GearType {
     ELECTRIC_BIKE,
     TANDEM_BIKE;
 
+    /**
+     * Converts a string to a gear type
+     * @param value the string to convert to gear type
+     * @return the corresponding gear type
+     * @throws InvalidGearTypeException if the string does not correspond to any of the available gear types
+     */
     public static GearType fromString(String value) throws InvalidGearTypeException {
         Preconditions.checkNotNull(value, "Value passed to enum should not be null.");
 

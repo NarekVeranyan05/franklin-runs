@@ -1,35 +1,38 @@
 package ca.umanitoba.cs.veranyan.model;
 
-import ca.umanitoba.cs.veranyan.model.exceptions.InvalidGearNameException;
+import ca.umanitoba.cs.veranyan.logic.MapManager;
 import ca.umanitoba.cs.veranyan.model.exceptions.InvalidTimeRangeException;
 import ca.umanitoba.cs.veranyan.model.gear.Gear;
 import ca.umanitoba.cs.veranyan.model.map.Map;
 import ca.umanitoba.cs.veranyan.model.map.Route;
 import com.google.common.base.Preconditions;
 
-import java.time.*;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.Year;
+import java.time.YearMonth;
 
 /**
- * An Activity is a class that contains all the information about
+ * An {@link Activity} is a class that contains all the information about
  * a particular cycling exercise. It contains the {@link Gear} used
  * for that particular exercise. Activities are stored in the {@link Profile} instance.
  */
-public class Activity {
+public class Activity implements Comparable<Activity> {
     private static final int METERS_PER_STEP = 10; // a step is one coordinate on the Map grid.
 
     private final Gear gear; // the gear to be used in Activity
     private final LocalDateTime start; // the start time of Activity
     private final LocalDateTime end; // Activity end is initialised with null until ended explicitly using endActivity()
-    private final Map.ProcessedRoute route;
+    private final MapManager.ProcessedRoute route;
 
     /**
-     * Constructor for Activity
-     * @param gear the gear to add to the activity. Must not be {@code null}.
-     * @param route the route to add to the activity. Must not be {@code null}.
-     * @param start the start date of the activity. Must not be {@code null}.
-     * @param end the end date of the activity. Must not be {@code null}. Must be after {@code start}
+     * Constructor for {@link Activity}
+     * @param gear the {@link Gear} to add to the {@link Activity}. Must not be {@code null}.
+     * @param route the {@link Route} to add to the {@link Activity}. Must not be {@code null}.
+     * @param start the start date of the {@link Activity}. Must not be {@code null}.
+     * @param end the end date of the {@link Activity}. Must not be {@code null}. Must be after {@code start}
      */
-    private Activity(Gear gear, Map.ProcessedRoute route, LocalDateTime start, LocalDateTime end) {
+    private Activity(Gear gear, MapManager.ProcessedRoute route, LocalDateTime start, LocalDateTime end) {
         this.gear = gear;
 
         this.start = start;
@@ -45,7 +48,7 @@ public class Activity {
     }
 
     /**
-     * @return the average speed (meters per second) throughout the Activity.
+     * @return the average speed (meters per second) throughout the {@link Activity}.
      */
     public double getAvgSpeed() {
         checkActivity();
@@ -56,7 +59,7 @@ public class Activity {
     }
 
     /**
-     * @return the start time for the Activity. Must not be {@code null}.
+     * @return the start time for the {@link Activity}. Must not be {@code null}.
      */
     public LocalDateTime getStart() {
         checkActivity();
@@ -65,7 +68,7 @@ public class Activity {
     }
 
     /**
-     * @return the end time for the activity. May not be {@code null}.
+     * @return the end time for the {@link Activity}. May not be {@code null}.
      */
     public LocalDateTime getEnd() {
         checkActivity();
@@ -74,7 +77,7 @@ public class Activity {
     }
 
     /**
-     * @return the gear used in the activity. Must not be {@code null}.
+     * @return the {@link Gear} used in the {@link Activity}. Must not be {@code null}.
      */
     public Gear getGear() {
         checkActivity();
@@ -83,16 +86,23 @@ public class Activity {
     }
 
     /**
-     * @return the route used in the activity. Must not be {@code null}.
+     * @return the {@link Route} used in the {@link Activity}. Must not be {@code null}.
      */
-    public Map.ProcessedRoute getRoute(){
+    public MapManager.ProcessedRoute getRoute(){
         checkActivity();
 
         return route;
     }
 
+    @Override
+    public int compareTo(Activity o) {
+        checkActivity();
+
+        return this.start.compareTo(o.start);
+    }
+
     /**
-     * Ensures Activity invariants are not violated.
+     * Ensures {@link Activity} invariants are not violated.
      */
     private void checkActivity(){
         Preconditions.checkNotNull(gear, "gear cannot be null.");
@@ -108,6 +118,9 @@ public class Activity {
         // Map will ensure Route is within boundaries
     }
 
+    /**
+     * The builder class for {@link Activity}
+     */
     public static class ActivityBuilder{
         private Gear gear; // the gear to be used in Activity
         private int startMonth;
@@ -115,7 +128,7 @@ public class Activity {
         private int startHour;
         private int startMinute;
         private int durationInMinutes;
-        private Map.ProcessedRoute route;
+        private MapManager.ProcessedRoute route;
 
         public ActivityBuilder(){
             this.startMonth = -1;
@@ -125,6 +138,11 @@ public class Activity {
             this.durationInMinutes = -1;
         }
 
+        /**
+         * Sets a {@link Gear} for the {@link Activity} to build
+         * @param gear the {@link Gear} of the {@link Activity}
+         * @return the builder instance
+         */
         public ActivityBuilder gear(Gear gear){
             Preconditions.checkNotNull(gear, "gear cannot be null");
 
@@ -133,6 +151,11 @@ public class Activity {
             return this;
         }
 
+        /**
+         * Sets the month for the {@link Activity} start time
+         * @param month the month [1-12] of the start of the {@link Activity}.
+         * @return the builder instance
+         */
         public ActivityBuilder startMonth(int month) throws InvalidTimeRangeException {
             if(month < 1 || month > 12)
                 throw new InvalidTimeRangeException();
@@ -142,6 +165,11 @@ public class Activity {
             return this;
         }
 
+        /**
+         * Sets the start day of the month for the {@link Activity} start time
+         * @param day the day of the month of the start of the {@link Activity}.
+         * @return the builder instance
+         */
         public ActivityBuilder startDayOfMonth(int day) throws InvalidTimeRangeException {
             Preconditions.checkState(startMonth != -1, "startMonth() must be called before startDayOfMonth()");
 
@@ -155,6 +183,11 @@ public class Activity {
             return this;
         }
 
+        /**
+         * Sets the start hour for the {@link Activity} start time
+         * @param hour the hour of the start of the {@link Activity}.
+         * @return the builder instance
+         */
         public ActivityBuilder startHour(int hour) throws InvalidTimeRangeException{
             if(hour < 0 || hour > 23)
                 throw new InvalidTimeRangeException();
@@ -164,6 +197,11 @@ public class Activity {
             return this;
         }
 
+        /**
+         * Sets the start minute for the {@link Activity} start time
+         * @param minute the minute of the start of the {@link Activity}.
+         * @return the builder instance
+         */
         public ActivityBuilder startMinute(int minute) throws InvalidTimeRangeException{
             if(minute < 0 || minute > 59)
                 throw new InvalidTimeRangeException();
@@ -173,6 +211,11 @@ public class Activity {
             return this;
         }
 
+        /**
+         * Sets the duration for the {@link Activity}, in minutes
+         * @param duration the duration, in minutes
+         * @return the builder instance
+         */
         public ActivityBuilder durationInMinutes(int duration) throws InvalidTimeRangeException{
             if(duration <= 0 || duration > 6000)
                 throw new InvalidTimeRangeException();
@@ -182,7 +225,12 @@ public class Activity {
             return this;
         }
 
-        public ActivityBuilder route(Map.ProcessedRoute route){
+        /**
+         * Sets a {@link Route} for the {@link Activity} to build
+         * @param route the {@link Route} of the {@link Activity}
+         * @return the builder instance
+         */
+        public ActivityBuilder route(MapManager.ProcessedRoute route){
             Preconditions.checkNotNull(route, "route cannot be null");
 
             this.route = route;
@@ -200,14 +248,14 @@ public class Activity {
             Preconditions.checkState(durationInMinutes != -1, "durationInMinutes must be initialised");
 
             var yearMonth = YearMonth.of(Year.now().getValue(), startMonth);
-            var start = LocalDateTime.of(
+            LocalDateTime start;
+            start = LocalDateTime.of(
                     yearMonth.getYear(),
                     startMonth,
                     startDayOfMonth,
                     startHour,
                     startMinute
             );
-
 
             return new Activity(
                     gear,

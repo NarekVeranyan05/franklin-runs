@@ -4,10 +4,8 @@ import ca.umanitoba.cs.veranyan.model.Profile;
 import ca.umanitoba.cs.veranyan.model.map.Map;
 import com.google.common.base.Preconditions;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalAdjusters;
 
 /**
  * The printer class for the {@link Map}
@@ -23,8 +21,8 @@ public class MapPrinter {
     private final Map map;
 
     /**
-     * Constructor for MapPrinter.
-     * @param map the Map singleton to be printed. Must not be {@code null}.
+     * Constructor for {@link MapPrinter}.
+     * @param map the {@link Map} singleton to be printed. Must not be {@code null}.
      */
     public MapPrinter(Map map){
         this.map = map;
@@ -32,6 +30,9 @@ public class MapPrinter {
         checkMapPrinter();
     }
 
+    /**
+     * Prints the {@link Map} and all its obstacles and routes. This method prints to standard output (`System.out`).
+     */
     public void print() {
         checkMapPrinter();
 
@@ -80,51 +81,11 @@ public class MapPrinter {
             }
             System.out.println();
         }
-
-//        printWithBorders();
-    }
-
-    // FIXME
-    public void printWithBorders(){
-        int maxYLen; //
-        if (map.getWidth() > 9)
-            //
-            maxYLen = (int) Math.log10(map.getWidth() - 1) + 1; // the number of digits in the largest x-coordinate
-        else { // map width 1 crash prevention
-            maxYLen = 1;//
-        }
-
-        int maxXLen; //
-        if (map.getLength() > 9)
-            //
-            maxXLen = (int) Math.log10(map.getLength() - 1) + 1; // the number of digits in the largest y-coordinate
-        else { // map length 1 crash prevention
-            maxXLen = 1; //
-        }
-
-        System.out.printf("%" + (maxXLen + 1) + "s", ""); // indent for y-coordinate
-        for (int i = 0; i < map.getWidth() + 2; i++)
-            System.out.printf(" %" + maxYLen + "d", i);
-        System.out.println();
-
-        for(int x = 0; x < map.getLength() + 2; x++){
-            System.out.printf("%" + maxXLen + "d|", x); // printing the y-coordinate
-
-            for(int y = 0; y < map.getWidth() + 2; y++){
-                switch (map.getCoordinateType(x, y)) {
-                    case ROUTE -> System.out.printf(" %" + maxYLen + "s", ROUTE_SLOT);
-                    case OBSTACLE -> System.out.printf(" %" + maxYLen + "s", OBSTACLE_SLOT);
-                    case EMPTY -> System.out.printf(" %" + maxYLen + "s", EMPTY_SLOT);
-                    case BORDER -> System.out.printf(" %" + maxYLen + "s", "X");
-                }
-            }
-            System.out.println();
-        }
     }
 
     /**
-     * Prints the Map and all its Activities. This method prints to standard output (`System.out`).
-     * @param profile the profile for which to summarise info. Must not be {@code null}.
+     * Prints the {@link Map} and all its routes and obstacles, with summarisation for distance cycled. This method prints to standard output (`System.out`).
+     * @param profile the {@link Profile} for which to summarise info. Must not be {@code null}.
      */
     public void print(Profile profile){
         print();
@@ -142,7 +103,7 @@ public class MapPrinter {
     }
 
     /**
-     * Ensures MapPrinter invariants are not violated.
+     * Ensures {@link MapPrinter} invariants are not violated.
      */
     private void checkMapPrinter(){
         Preconditions.checkNotNull(map, "map cannot be null.");

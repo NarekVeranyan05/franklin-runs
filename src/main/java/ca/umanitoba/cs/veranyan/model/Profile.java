@@ -1,8 +1,8 @@
 package ca.umanitoba.cs.veranyan.model;
 
-import ca.umanitoba.cs.veranyan.model.exceptions.BlankNameException;
-import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateActivityException;
-import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateGearException;
+import ca.umanitoba.cs.veranyan.logic.MapManager;
+import ca.umanitoba.cs.veranyan.model.exceptions.GearNotFoundException;
+import ca.umanitoba.cs.veranyan.model.exceptions.*;
 import ca.umanitoba.cs.veranyan.model.gear.Gear;
 import ca.umanitoba.cs.veranyan.model.map.Map;
 import com.google.common.base.Preconditions;
@@ -14,27 +14,26 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * The {@link Profile} domain model object.
+ * @implNote {@link Profile} names are unique.
+ */
 public class Profile implements Cloneable {
-    private String name;
+    private final String name;
     private final SortedSet<Gear> gears;
     private final SortedSet<Activity> activities;
     private final SortedSet<Profile> friends;
 
     /**
-     * Constructor for Profile.
-     * Requires to add a Gear to a Profile.
-     * @param profileName the getName of the Profile.
+     * Constructor for {@link Profile}.
+     * Requires to add a {@link Gear} to a {@link Profile}.
+     * @param profileName the name of the {@link Profile}.
      */
-    private Profile(String profileName){
+    public Profile(String profileName){
         name = profileName;
 
-        // Gears are ordered by getName. Duplicates not allowed
-        this.gears = new TreeSet<>(new Comparator<Gear>() {
-            @Override
-            public int compare(Gear o1, Gear o2) {
-                return o1.getName().compareToIgnoreCase(o2.getName());
-            }
-        });
+        // Gears are ordered by name. Duplicates not allowed
+        this.gears = new TreeSet<>((o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName()));
 
         // activities should not have duplicates.
         // activities are put in ascending order in the Set (ordered by start time).
@@ -50,18 +49,13 @@ public class Profile implements Cloneable {
             }
         });
 
-        this.friends = new TreeSet<>(new Comparator<Profile>() {
-            @Override
-            public int compare(Profile o1, Profile o2) {
-                return o1.getName().compareTo(o2.getName());
-            }
-        });
+        this.friends = new TreeSet<>(Comparator.comparing(Profile::getName));
 
         checkProfile();
     }
 
     /**
-     * @return the Profile getName
+     * @return the {@link Profile} name
      */
     public String getName() {
         checkProfile();
@@ -70,23 +64,7 @@ public class Profile implements Cloneable {
     }
 
     /**
-     * Changes the getName of the Profile
-     * @param name the new getName of the Profile
-     */
-    public void setName(String name) {
-        checkProfile();
-
-        this.name = name;
-
-        checkProfile();
-    }
-
-    public boolean hasGear(){
-        return !gears.isEmpty();
-    }
-
-    /**
-     * @return the unmodifiable list of Gears. Must not be {@code null}
+     * @return the unmodifiable list of {@link Gear} objects. Must not be {@code null}
      */
     public SortedSet<Gear> getGears(){
         checkProfile();
@@ -95,28 +73,37 @@ public class Profile implements Cloneable {
     }
 
     /**
-     * @param index the index of the Gear.
-     * @return the Gear at the given index. Must not be {@code null}.
+     * @param name the name of the {@link Gear}
+     * @return the {@link Gear} with matching name or {@code null} if no such {@link Gear} found
      */
-    public Gear getGear(int index){
+    public Gear getGear(String name) throws GearNotFoundException  {
+        Preconditions.checkNotNull(name, "name cannot be null");
         checkProfile();
 
+        Gear gearFound = null;
         Iterator<Gear> gearIterator = gears.iterator();
 
         // omitting all elements until reaching the element at index
-        for(int i = 0; i < index; i++)
-            gearIterator.next();
+        while(gearFound == null && gearIterator.hasNext()){
+            var nextGear = gearIterator.next();
+            if(nextGear.getName().equals(name))
+                gearFound = nextGear;
+        }
+
+        if(gearFound == null)
+            throw new GearNotFoundException();
 
         checkProfile();
 
-        return gearIterator.next();
+        return gearFound;
     }
 
     /**
-     * Adds new Gear to the Profile.
-     * @param gear the Gear to be added
+     * Adds new {@link Gear} to the {@link Profile}
+     * @param gear the {@link Gear} to be added
      */
-    public boolean addGear(Gear gear) throws DuplicateGearException {
+    public void addGear(Gear gear) throws DuplicateGearException {
+        Preconditions.checkNotNull(gear, "gear cannot be null");
         checkProfile();
 
         boolean isAdded = gears.add(gear);
@@ -125,16 +112,13 @@ public class Profile implements Cloneable {
             throw new DuplicateGearException();
 
         checkProfile();
-        return isAdded;
     }
 
     /**
-     * Removes a Gear whose index matches from the Profile.
-     * Profile must have at least one Gear.
-     * @param gear the gear to remove
+     * Removes a {@link Gear} whose index matches from the {@link Profile}.
+     * @param gear the {@link Gear} to remove
      */
     public void removeGear(Gear gear){
-        Preconditions.checkNotNull(gear, "gear cannot be null");
         checkProfile();
 
         gears.remove(gear);
@@ -150,6 +134,8 @@ public class Profile implements Cloneable {
      * @return the total number of steps in range. Must be non-negative.
      */
     public int getTotalNumSteps(LocalDate currentDay, ChronoUnit range) {
+        Preconditions.checkNotNull(currentDay, "currentDay cannot be null");
+        Preconditions.checkNotNull(range, "range cannot be null");
         checkProfile();
 
         LocalDate start = currentDay; // default initialisation
@@ -185,7 +171,7 @@ public class Profile implements Cloneable {
     }
 
     /**
-     * @return the unmodifiable list of activities on the Map. Must not be {@code null}.
+     * @return the unmodifiable list of activities of the {@link Profile}. Must not be {@code null}.
      */
     public SortedSet<Activity> getActivities() {
         checkProfile();
@@ -194,25 +180,26 @@ public class Profile implements Cloneable {
     }
 
     /**
-     * Adds an activity to the Map instance.
-     * @param activity the activity instance to add to Map. Must not be {@code null}.
+     * Adds an {@link Activity} to the {@link Profile}
+     * @param activity the {@link Activity} instance to add to {@link Map}. Must not be {@code null}.
      */
     public void addActivity(Activity activity) throws DuplicateActivityException {
-        checkProfile();;
+        Preconditions.checkNotNull(activity, "activity cannot be null");
+        checkProfile();
 
         boolean isAdded = activities.add(activity);
 
         if(!isAdded)
             throw new DuplicateActivityException();
 
-        checkProfile();;
+        checkProfile();
     }
 
     /**
      * Removes an activity from the Map by index.
      * @param index the index of the activity to remove.
      */
-    public void removeActivity(int index){
+    public void removeActivity(int index) {
         checkProfile();
 
         Iterator<Activity> iterator = activities.iterator();
@@ -223,62 +210,84 @@ public class Profile implements Cloneable {
 
         activities.remove(iterator.next());
 
-        checkProfile();;
+        checkProfile();
     }
 
+    /**
+     * @return the set of all friend profiles for the {@link Profile}
+     */
     public Set<Profile> getFriends() {
         return friends;
     }
 
-    public boolean follow(Profile other){
+    /**
+     * Adds the other {@link Profile} to the list of friends of the current {@link Profile}.
+     *
+     * @param other the {@link Profile} to follow
+     * @throws CannotFollowSelfException if attempted to follow {@code this}
+     * @throws CannotFollowAgainException if {@code other} is not in the list of other profiles that can be followed
+     */
+    public void follow(Profile other) throws CannotFollowSelfException, CannotFollowAgainException {
         Preconditions.checkNotNull(other, "other cannot be null");
-        Preconditions.checkState(other != this, "profile cannot follow themselves");
+        checkProfile();
 
-        return friends.add(other);
+        if(other.getName().equals(name))
+            throw new CannotFollowSelfException();
+        if(friends.contains(other))
+            throw new CannotFollowAgainException();
+
+        friends.add(other);
+
+        checkProfile();
     }
 
-    public boolean unfollow(Profile other) {
+    /**
+     * Removes the other {@link Profile} from the list of friends of the current {@link Profile}
+     *
+     * @param other the other {@link Profile} to unfollow
+     * @throws CannotUnfollowSelfException if attempted to unfollow {@code this}
+     * @throws CannotUnfollowNonFriendException if {@code other} is not in the list of friends
+     */
+    public void unfollow(Profile other) throws CannotUnfollowSelfException, CannotUnfollowNonFriendException{
         Preconditions.checkNotNull(other, "other cannot be null");
-        Preconditions.checkNotNull(other, "profile cannot unfollow themselves");
+        checkProfile();
+
+        if(other.getName().equals(name))
+            throw new CannotUnfollowSelfException();
+        if(!friends.contains(other))
+            throw new CannotUnfollowNonFriendException();
 
         boolean unfollowed = false;
         Iterator<Profile> iterator = friends.iterator();
 
         while(iterator.hasNext() && !unfollowed){
             var curr = iterator.next();
+
             if(curr == other){
                 friends.remove(other);
-                unfollowed = true; // FIXME assign to what's returned by above statement
+                unfollowed = true;
             }
         }
 
-        return unfollowed;
+        checkProfile();
     }
 
     /**
-     * @return the unmodifiable list of activities on the Map. Must not be {@code null}.
+     * @return the unmodifiable list of routes on the {@link Map}. Must not be {@code null}.
      */
-    public ArrayList<Map.ProcessedRoute> getRoutes() {
+    public List<MapManager.ProcessedRoute> getRoutes() {
         checkProfile();
 
         return activities.stream().map(Activity::getRoute).collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
-     * Ensures Profile invariants are not violated.
+     * Ensures {@link Profile} invariants are not violated.
      */
     private void checkProfile(){
-        /*
-            private String getName;
-    private final SortedSet<Gear> gears;
-    private final SortedSet<Activity> activities;
-    private final Set<Profile> friends;
-         */
-
         Preconditions.checkNotNull(name, "getName cannot be null.");
         Preconditions.checkState(!name.isBlank(), "getName cannot be blank.");
         Preconditions.checkNotNull(gears, "gears cannot be null.");
-//        Preconditions.checkState(!gears.isEmpty(), "gears should have at least one entry.");
         Preconditions.checkNotNull(activities, "activities cannot be null.");
         Preconditions.checkNotNull(friends, "friends cannot be null.");
 
@@ -286,30 +295,22 @@ public class Profile implements Cloneable {
         for (var gear : gears)
             Preconditions.checkNotNull(gear, "gears entry cannot be null.");
 
+        // Activity cannot be null
+        for (var activity : activities)
+            Preconditions.checkNotNull(activity, "activities entries cannot be null.");
+
         // Friend cannot be null, Profile cannot follow themselves
         for (var friend : friends){
             Preconditions.checkNotNull(friend, "friend profile cannot be null");
             Preconditions.checkState(this != friend, "profile cannot follow themselves");
         }
 
-        // Activity cannot be null
-        for (var activity : activities)
-            Preconditions.checkNotNull(activity, "activities entries cannot be null.");
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("Friends of ").append(this.name).append("\n");
-        for (var friend : this.friends){
-            stringBuilder.append(friend.name).append("\n");
-        }
-
-        return stringBuilder.toString();
     }
 
     @Override
     public Profile clone() {
+        checkProfile();
+
         try {
             return (Profile) super.clone();
 
@@ -318,13 +319,22 @@ public class Profile implements Cloneable {
         }
     }
 
-    public static class ProfileBuilder{
+    /**
+     * The builder class for {@link Profile}
+     */
+    public static class ProfileBuilder {
         String name;
 
-        public ProfileBuilder name(String name) throws BlankNameException{
+        /**
+         * Sets a name for the {@link Profile} to build
+         * @param name the name of the {@link Profile}
+         * @return the builder instance
+         * @throws BlankNameException if {@code name} has no characters
+         */
+        public ProfileBuilder name(String name) throws BlankNameException {
             Preconditions.checkNotNull(name, "getName cannot be null");
 
-            if(name.isBlank())
+            if (name.isBlank())
                 throw new BlankNameException();
 
             this.name = name;
@@ -332,15 +342,14 @@ public class Profile implements Cloneable {
             return this;
         }
 
+        /**
+         * Builds the {@link Profile} without gears or activities
+         * @return the new {@link Profile}
+         */
         public Profile build(){
-            checkProfileBuilder();
+            Preconditions.checkNotNull(name, "name cannot be null");
 
             return new Profile(name);
-        }
-
-        private void checkProfileBuilder(){
-            Preconditions.checkNotNull(name, "getName cannot be null");
-            Preconditions.checkState(!name.isBlank(), "getName cannot be blank");
         }
     }
 }

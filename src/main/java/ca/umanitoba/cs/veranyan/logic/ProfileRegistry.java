@@ -1,34 +1,29 @@
 package ca.umanitoba.cs.veranyan.logic;
 
-import ca.umanitoba.cs.veranyan.logic.assets.RouteFilterType;
+import ca.umanitoba.cs.veranyan.model.assets.Pair;
+import ca.umanitoba.cs.veranyan.logic.exceptions.*;
+import ca.umanitoba.cs.veranyan.model.exceptions.*;
 import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.Profile;
-import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateActivityException;
-import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateProfileException;
-import ca.umanitoba.cs.veranyan.model.exceptions.NoNameMatchException;
 import com.google.common.base.Preconditions;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * {@link ProfileRegistry} manages the business logic of keeping multiple profiles within the same system.
+ */
 public class ProfileRegistry {
+
     private final SortedSet<Profile> profiles;
     private Profile currentProfile;
     private Status loginStatus;
 
-    /**
-     * Constructor for {@link ProfileRegistry}
-     */
     public ProfileRegistry(){
         profiles = new TreeSet<>(
-                new Comparator<Profile>() {
-                    @Override
-                    public int compare(Profile o1, Profile o2) {
-                        return o1.getName().compareToIgnoreCase(o2.getName());
-                    }
-                }
+            (o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName())
         );
-        loginStatus = Status.OFFLINE;
+        loginStatus = Status.OFFLINE; // no profile logged in yet
 
         checkProfileRegistry();
     }
@@ -36,22 +31,17 @@ public class ProfileRegistry {
     /**
      * @return all the profiles in the system. Must not be {@code null}.
      */
-    public SortedSet<Profile> getProfiles() {
+    public SortedSet<Profile> getProfiles() throws EmptyProfilesException {
         checkProfileRegistry();
+
+        if(profiles.isEmpty())
+            throw new EmptyProfilesException();
+
         return profiles;
     }
 
     /**
-     * @return all the alternative profiles in the system other than the current profile.
-     */
-    public Set<Profile> getOtherProfiles(){
-        checkProfileRegistry();
-
-        return profiles.stream().filter(profile -> profile != currentProfile).collect(Collectors.toUnmodifiableSet());
-    }
-
-    /**
-     * @return the current profile logged into the system. May be {@code null}.
+     * @return the current {@link Profile} logged into the system. May be {@code null}.
      */
     public Profile getCurrentProfile() {
         Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
@@ -60,22 +50,50 @@ public class ProfileRegistry {
         return currentProfile;
     }
 
-    public Set<Profile> getFriends(){
+    /**
+     * @return all the friends of the current {@link Profile}
+     */
+    public Set<Profile> getFriends() throws EmptyProfilesException {
         Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
+        checkProfileRegistry();
 
-        return currentProfile.getFriends();
+        var friends = currentProfile.getFriends();
+
+        if(friends.isEmpty())
+            throw new EmptyProfilesException();
+
+        checkProfileRegistry();
+
+        return friends;
     }
 
-    public Set<Profile> getProfilesNotInCircle(){
+    /**
+     * @return all the profiles not followed by the current {@link Profile}
+     */
+    public Set<Profile> getProfilesNotInCircle() throws EmptyProfilesException {
         Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
+        checkProfileRegistry();
 
-        return profiles.stream().filter(
+        var profilesNotInCircle  = profiles.stream().filter(
                 profile -> (!currentProfile.getFriends().contains(profile) && profile != currentProfile)
         ).collect(Collectors.toUnmodifiableSet());
+
+        if(profilesNotInCircle.isEmpty())
+            throw new EmptyProfilesException();
+
+        checkProfileRegistry();
+
+        return profilesNotInCircle;
     }
 
-    public Profile getProfile(String name) throws NoNameMatchException{
+    /**
+     * @param name the name of the {@link Profile} to access
+     * @return the {@link Profile} with matching name. May not be {@code null}
+     * @throws NoNameMatchException if no {@link Profile} has a matching name
+     */
+    public Profile getProfile(String name) throws NoNameMatchException {
         Preconditions.checkNotNull(name, "getName cannot be null");
+        checkProfileRegistry();
 
         Profile selectedProfile = null;
         var iterator = profiles.iterator();
@@ -95,9 +113,9 @@ public class ProfileRegistry {
     }
 
     /**
-     * Adds a new profile to the registry
+     * Adds a new {@link Profile} to the {@link ProfileRegistry}
      *
-     * @param profile the new profile to be added. Must not be {@code null}
+     * @param profile the new {@link Profile} to be added. Must not be {@code null}
      */
     public void addProfile(Profile profile) throws DuplicateProfileException {
         Preconditions.checkNotNull(profile, "profile cannot be null");
@@ -105,85 +123,65 @@ public class ProfileRegistry {
 
         if(profiles.contains(profile)) throw new DuplicateProfileException();
 
-        int currSize = profiles.size();
-        boolean isAdded = profiles.add(profile);
-
-        if(isAdded)
-            Preconditions.checkState(profiles.size() == currSize + 1, "must add new profile");
-        checkProfileRegistry();
-
-    }
-
-    /**
-     * Replaces the current profile with replacement containing desired modifications
-     *
-     * @param replacement the replacement of the current profile. Must not be {@code null}.
-     */
-    public void replaceCurrentProfileName(Profile replacement) throws DuplicateProfileException{
-        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
-        Preconditions.checkNotNull(replacement, "replacement cannot be null");
-        checkProfileRegistry();
-
-        boolean isDuplicate = false;
-
-        Iterator<Profile> iterator = profiles.iterator();
-        while(iterator.hasNext() && !isDuplicate) {
-            var next = iterator.next();
-            isDuplicate = (next != currentProfile) && (next.getName().equalsIgnoreCase(replacement.getName()));
-        }
-
-        if(isDuplicate)
-            throw new DuplicateProfileException();
-
-        currentProfile.setName(replacement.getName());
+        profiles.add(profile);
 
         checkProfileRegistry();
-
     }
 
     /**
      * @param type the filter setting for activities
      * @return all the activities filtered by type
      */
-    public SortedSet<Activity> getActivities(RouteFilterType type) {
-        checkProfileRegistry();
-        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
+    public SortedSet<Pair<String, Activity>> getActivities(ActivityFilterType type) {
         Preconditions.checkNotNull(type, "type cannot be null");
+        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
+        checkProfileRegistry();
 
-        SortedSet<Activity> filteredActivities = new TreeSet<>(
-                (o1, o2) -> {
-                    int result;
-                    if (o1.getStart().isEqual(o2.getStart()))
-                        result = -1;
-                    else result = o1.getStart().compareTo(o2.getStart());
-
-                    return result;
-                }
-        );
+        SortedSet<Pair<String, Activity>> filteredActivities = new TreeSet<>(Comparator.comparing(Pair::getSecond));
 
         switch (type){
             case OWN -> {
-                filteredActivities.addAll(currentProfile.getActivities());
+                for(var activity : currentProfile.getActivities()) {
+                    filteredActivities.add(new Pair<>(currentProfile.getName(), activity));
+                }
             }
             case FRIENDS ->{
-                for(var profile : currentProfile.getFriends())
-                    filteredActivities.addAll(profile.getActivities());
+                for(var profile : currentProfile.getFriends()) {
+                    for (var activity : profile.getActivities())
+                        filteredActivities.add(new Pair<>(profile.getName(), activity));
+                }
             }
             case OWN_AND_FRIENDS -> {
-                filteredActivities.addAll(currentProfile.getActivities());
+                for(var activity : currentProfile.getActivities()) {
+                    filteredActivities.add(new Pair<>(currentProfile.getName(), activity));
+                }
 
-                for(var profile : currentProfile.getFriends())
-                    filteredActivities.addAll(profile.getActivities());
+                for(var profile : currentProfile.getFriends()) {
+                    for (var activity : profile.getActivities())
+                        filteredActivities.add(new Pair<>(profile.getName(), activity));
+                }
+            }
+            case ALL -> {
+                for(var profile : profiles){
+                    for(var activity : profile.getActivities())
+                        filteredActivities.add(new Pair<>(profile.getName(), activity));
+                }
             }
         }
+
+        checkProfileRegistry();
 
         return filteredActivities;
     }
 
+    /**
+     * Adds an {@link Activity} to the current {@link Profile}
+     * @param activity the {@link Activity} to add
+     * @throws DuplicateActivityException if the current {@link Profile} already has an {@link Activity} with the same start date.
+     */
     public void addActivity(Activity activity) throws DuplicateActivityException {
         Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
         Preconditions.checkNotNull(activity, "activity cannot be null");
-
         checkProfileRegistry();
 
         currentProfile.addActivity(activity);
@@ -196,7 +194,8 @@ public class ProfileRegistry {
      * @param profile the {@link Profile} to log in with.
      */
     public void loadProfile(Profile profile){
-        Preconditions.checkNotNull(profile, "profile cannot be null.");
+        Preconditions.checkNotNull(profile, "profile cannot be null");
+        Preconditions.checkState(profiles.contains(profile), "profile has to be added to be loaded");
         checkProfileRegistry();
 
         boolean isAdded = false;
@@ -204,25 +203,33 @@ public class ProfileRegistry {
         while(iterator.hasNext() && !isAdded)
             isAdded = (iterator.next() == profile);
 
-        Preconditions.checkState(isAdded, "Profile has to be added to be loaded.");
-
         currentProfile = profile;
         loginStatus = Status.ONLINE; // profile is now online (logged into the system)
 
         checkProfileRegistry();
     }
 
+    /**
+     * Logs out of a particular {@link Profile}.
+     */
     public void unloadProfile(){
+        checkProfileRegistry();
+
         currentProfile = null;
         loginStatus = Status.OFFLINE;
+
+        checkProfileRegistry();
     }
 
     /**
-     * Follows another profile
+     * Follows another {@link Profile}
      *
-     * @param other the other profile to follow
+     * @param other the other {@link Profile} to follow
+     * @throws CannotFollowSelfException if attempted to follow {@code this}
+     * @throws CannotFollowAgainException if {@code other} is not in the list of other profiles that can be followed
      */
-    public void follow(Profile other){
+    public void follow(Profile other) throws CannotFollowAgainException, CannotFollowSelfException {
+        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
         Preconditions.checkNotNull(other, "other cannot be null.");
         checkProfileRegistry();
 
@@ -230,28 +237,34 @@ public class ProfileRegistry {
     }
 
     /**
-     * Unfollows another profile
+     * Unfollows another {@link Profile}
      *
-     * @param other the other profile to unfollow
+     * @param other the other {@link Profile} to unfollow
+     * @throws CannotUnfollowSelfException if attempted to unfollow {@code this}
+     * @throws CannotUnfollowNonFriendException if {@code other} is not in the list of friends
      */
-    public void unfollow(Profile other){
+    public void unfollow(Profile other) throws CannotUnfollowSelfException, CannotUnfollowNonFriendException {
+        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
         Preconditions.checkNotNull(other, "other cannot be null.");
         checkProfileRegistry();
 
         currentProfile.unfollow(other);
     }
 
-
-    public boolean isEmpty(){
+    /**
+     * Checks the login status of the system
+     * @param status the login status to check
+     * @return {@code true} if the login status matched, {@code false} otherwise
+     */
+    public boolean checkStatus(Status status){
         checkProfileRegistry();
 
-        return profiles.isEmpty();
-    }
-
-    public boolean checkStatus(Status status){
         return (loginStatus == status);
     }
 
+    /**
+     * Class invariants for {@link ProfileRegistry}
+     */
     private void checkProfileRegistry(){
         Preconditions.checkNotNull(profiles, "profiles cannot be null");
         Preconditions.checkNotNull(loginStatus, "loginStatus cannot be null");
@@ -260,8 +273,39 @@ public class ProfileRegistry {
             Preconditions.checkNotNull(currentProfile, "currentProfile cannot be null when logged in");
     }
 
+    /**
+     * The status of the registry's current {@link Profile}
+     */
     public enum Status {
         ONLINE, // if user logged in
         OFFLINE // if user hasn't logged in yet
+    }
+
+    /**
+     * Filtering types for the activities of various profiles in the registry
+     */
+    public enum ActivityFilterType {
+        ALL,
+        OWN, // current profile's routes
+        FRIENDS, // current profile's friends' routes
+        OWN_AND_FRIENDS;
+
+        /**
+         * Converts a string to {@link ActivityFilterType}
+         * @param value the string to convert to {@link ActivityFilterType}
+         * @return the corresponding {@link ActivityFilterType}
+         * @throws InvalidGearTypeException if the string does not correspond to any of the available filter types
+         */
+        public static ActivityFilterType fromString(String value) throws InvalidGearTypeException {
+            Preconditions.checkNotNull(value, "Value passed to enum should not be null.");
+
+            return switch(value) {
+                case "ALL" -> ALL;
+                case "OWN" -> OWN;
+                case "FRIENDS" -> FRIENDS;
+                case "OWN_AND_FRIENDS" -> OWN_AND_FRIENDS;
+                default -> throw new InvalidGearTypeException();
+            };
+        }
     }
 }
