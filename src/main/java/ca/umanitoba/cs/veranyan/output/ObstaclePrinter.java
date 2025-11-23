@@ -25,8 +25,8 @@ public class ObstaclePrinter {
     public void print(){
         checkObstaclePrinter();
 
-        var topLeftCoord = obstacle.topLeftCoord();
-        var bottomRightCoord = obstacle.bottomRightCoord();
+        var topLeftCoord = obstacle.getCoordinates().get(0);
+        var bottomRightCoord = obstacle.getCoordinates().get(obstacle.getCoordinates().size() - 1);
 
         int width = bottomRightCoord.x() - topLeftCoord.x() + 1;
         int length = bottomRightCoord.y() - topLeftCoord.y() + 1;

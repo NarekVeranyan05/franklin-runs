@@ -1,29 +1,26 @@
 * Title: Track-Me-Riding
 * Author: Narek Veranyan (veranyan@myumanitoba.ca)
 * Student number: 8040209
-* Date: October __, 2025
+* Date: November 19, 2025
 ---
 
 # Overview
 > Track-Me-Riding is an implementation of an exercise tracker software for COMP 2450 
 > specifically designed for tracking cycling activities. The software offers
 >
->   * A user-defined grid-structured map to track an activity.
->   * There are obstacles that can be added to the map.
->   * There are gears to be recorded and later added to an activity.
+>   * Multiple profiles in the system that can share routes and view each other's activities,
+>   * A feed of activities with each route displayed on a user-defined grid-structured map, 
+>   * There are routes and obstacles that can be added to the map,
+>   * There are gears to be added and later used in an activity.
 
 ## Vision Statement
 > Build software that allows exercises to track exercises
 > over a map, share information about their exercises,
 > and measure performance over time.
 
-## Resources
-* used the following existing system to come up with classes in the domain model: <https://www.strava.com/>
-* found information about bike types: <https://www.edinburghbicycle.com/info/blog/types-of-bikes-buying-guide>
-
 ## Running
 This project was built using Maven and developed in IntelliJ IDEA.
-The project can be run using several options:
+It can be run using several options:
 
 1. Open the `Main.java` class and click the green play button 
     in the top right corner.
@@ -32,6 +29,26 @@ The project can be run using several options:
     mvn compile exec:java -Dexec.mainClass="ca.umanitoba.cs.veranyan.Main"   
     ```
 # User Flow Diagram
+
+### main menu
+
+```mermaid
+flowchart
+    subgraph main menu 
+        entrance[[entrance screen]]
+        entrance == enter ==> login[[log-in screen]]
+        entrance == quit ==> exit{exit system}
+        
+        login ==> options[menu \n option \n selection]
+        
+        options == update profile ==> updateScreen[[update screen]] ==> options
+        options == find route ==> pathFinder[[path finder]] ==> options
+        options == add activity ==> activityInsertionScreen[[activity insertion screen]] ==> options
+        options == display feed ==> feedScreen[[feed screen]] ==> options
+        options == quit ==> entrance
+            
+    end
+```
 
 ### log-in and sign-up
 
@@ -51,7 +68,7 @@ flowchart
         
         createProfile -. profile already exists .-> profileInsertion
         
-        createProfile -. profile created .-> mainMenu
+        createProfile -. profile created .-> loadProfile
         
         %% login
         checkExistence{check profiles exist}
@@ -66,7 +83,7 @@ flowchart
 
         loadProfile{load profile}
         
-        loadProfile -. profile selected .-> mainMenu
+        loadProfile -. profile loaded .-> mainMenu
        
         mainMenu[[main menu]]
     end
@@ -74,81 +91,274 @@ flowchart
 
 ### update profile
 
+#### Note: 
+> Error outputs for checking if there are profiles to follow or if profile has friends
+> do not go back to the previous subtask but to the ending subtask so that the user is not
+> left with the only available choice being to select the other 2 options, while it was not
+> the original intention.
+
 ```mermaid
-flowchart
+flowchart 
     subgraph update profile
         updateScreen[[update screen]]
         
-        updateScreen == name ==> nameInsertion
-        
         updateScreen == add gear ==> gearInsertion
         
-        updateScreen == remove gear ==> gearSelection
+        updateScreen == follow ==> checkIfCanFollow
         
-        %% change name
-        nameInsertion[name insertion]
-        
-        nameInsertion == name ==> changeName
-        
-        changeName{change name}
-        
-        changeName -. name is set for another profile .-> nameInsertion
-        
-        changeName -. name changed .-> mainMenu
+        updateScreen == unfollow ==> checkIfHasFriends
         
         %% add gear
         
         gearInsertion[gear insertion]
         
-        gearInsertion == gear ==> addGear
+        gearInsertion == gear data ==> addGear
 
-        addGear{add gear}
+        addGear{create and \n save gear}
         
-        addGear -. gear already exists .-> gearInsertion
+        addGear -. duplicate gear name .-> gearInsertion
         
-        addGear -. gear added .-> mainMenu
+        addGear -. gear saved .-> mainMenu
         
-        %% remove gear
+        %% follow
         
-        gearSelection[gear selection]
+        checkIfCanFollow{check if \n has profiles \n to follow}
         
-        gearSelection == selected gear ==> removeGear
+        checkIfCanFollow -. no one \n left to follow .-> mainMenu
         
-        removeGear{remove gear}
+        checkIfCanFollow -. has profiles to follow .-> profileSelection
         
-        removeGear -. must have 1 gear left .-> updateScreen
+        profileSelection[profile selection]
         
-        removeGear -. gear removed .-> mainMenu
+        %% unfollow
+
+        checkIfHasFriends{check if \n has friends}
         
-        mainMenu[[main menu]]
+        checkIfHasFriends -. there are \n no friends .-> mainMenu
+        
+        checkIfHasFriends -. has friends .-> profileSelection
+        
+        profileSelection == selected profile ==> changeConnection{change \n connection \n with profile}
+        
+        changeConnection -. can't un/follow self or \n already un/followed .-> profileSelection 
+        
+        changeConnection -. connection changed .-> mainMenu[[main menu]]
     end
+```
+
+### insert activity
+
+```mermaid
+flowchart TD
+subgraph insert activity
+    activityInsertionScreen[[activity insertion screen]]
+    
+    activityInsertionScreen ==> determineGearAvailability
+    
+    determineGearAvailability{check gear\n available}
+    
+    determineGearAvailability -. no gear available .-> mainMenu
+    
+    determineGearAvailability -. gear available .-> gearSelection
+    
+    gearSelection[gear selection]
+
+    gearSelection == gear ==> saveGear{save gear}
+    
+    saveGear -. gear saved .-> routeConstructionTypeSelection[route construction \n type selection]
+    
+    %% route creation
+    routeConstructionTypeSelection == create route ==> routeInsertion[[route insertion screen]]
+    
+    routeInsertion == route ==> saveRoute
+    
+    %% route selection
+    routeConstructionTypeSelection == select route ==> determineRouteAvailability{check route\n available}
+
+    determineRouteAvailability -. no routes available .-> routeConstructionTypeSelection
+
+    determineRouteAvailability -. route available .-> routeSelection[route \n selection]
+    
+    routeSelection == route ==> saveRoute
+    
+    %% final processing
+    saveRoute{save route}
+    
+    saveRoute -. route saved .-> obstacleCreationChoiceInsertion
+    
+    %% obstacle insertion
+    obstacleCreationChoiceInsertion[obstacle creation \n choice insertion]
+    
+    obstacleCreationChoiceInsertion == insert obstacle ==> obstacleInsertion[obstacle insertion]
+
+    obstacleCreationChoiceInsertion == skip ==> mainMenu[main menu]
+    
+    obstacleInsertion == obstacle data ==> saveObstacle{create and \n save obstacle}
+
+    saveObstacle -. overlap with route \n or out of bounds .-> obstacleInsertion
+    
+    saveObstacle -. obstacle saved .-> mainMenu[[main menu]]
+    
+end
+```
+
+### insert route
+
+```mermaid
+flowchart
+    subgraph insert route
+        routeInsertionScreen[[route  insertion]]
+
+        routeInsertionScreen == route data ==> validateRoute
+
+        validateRoute{create \n route}
+        
+        validateRoute -. route created .-> moveInsertion[move insertion]
+
+        validateRoute -. overlap with \n obstacle or \n out of bounds .-> routeInsertionScreen
+
+        moveInsertion == direction and steps ==> applyMove{apply\n move}
+
+        applyMove -. overlap with \n obstacle or \n out of bounds .-> moveInsertion
+
+        applyMove -. moved .-> continuationChoice[continuation choice \n insertion]
+
+        continuationChoice == yes ==> moveInsertion
+
+        continuationChoice == no ==> activityInsertionScreen[[activity insertion screen]]
+    end
+```
+
+### feed
+
+```mermaid
+flowchart
+subgraph feed screen 
+    feedScreen[[feed screen]] ==> displayFeed
+    
+    displayFeed{display \n feed} -. feed displayed \n with default filter .-> navigationSelection[navigation selection]
+    
+    navigationSelection == quit ==> mainMenu[[main menu]]
+    
+    navigationSelection == filter ==> filterSelection[filter selection]
+    
+    filterSelection == selected filter ==> setFilter{set filter}
+    
+    setFilter -. filter set .-> displayFeed
+end
+```
+
+### path finder
+
+```mermaid
+flowchart
+subgraph path finder screen
+    pathFinderScreen[[path finder screen]] == include friends \n or not ==> fillMap{include \n routes in map}
+    
+    fillMap -. map filled with \n routes to \n find from .-> startEndInsertion
+
+    startEndInsertion[start and end point \n insertion]
+    
+    startEndInsertion == start and end coordinates ==> findPath{find path}
+    
+    findPath -. start and/or end coordinate out of bounds .-> startEndInsertion
+    
+    findPath -. route found .-> updateMap{fill map with \n route found} 
+    
+    updateMap -. map updated .-> mainmenu[[main menu]]
+
+    findPath -. route not found .-> mainmenu
+    
+    
+end
 ```
 
 # Domain Model Diagram
 
-Here's my domain model:
+## Resources
+* used the following existing system to come up with classes in the domain model: <https://www.strava.com/>
+* found information about bike types: <https://www.edinburghbicycle.com/info/blog/types-of-bikes-buying-guide>
+
+Here's my updated diagram for my domain model:
 
 > changes:
+> 
+> ### Profile
 > 1. Exerciser class renamed Profile
-> 2. Added name attribute to Profile, changed invariant accordingly
-> 3. changed method to Profile::addGear(Gear) boolean
+> 2. Removed the map attribute, thus removing the composition relationship between Profile and Map
+> 3. Removed accessors and mutators for the map attribute
+> 4. Added name, gears, activities, and friends attributes to Profile
+> 5. Thus added a composition relationship between Profile and Activities, and an aggregation relationship with itself
+> 6. Added relevant accessors and mutators for the new attributes
+> 7. Added getRoutes() method
+> 8. Added follow() and unfollow() methods
+> 9. Added getNumbOfSteps() method
+> 10. changed method addGear(GearType, String, double) to addGear(Gear)  
+> 11. changed invariants accordingly
+> 
+> ### Map
+> 1. made width and length attributes static
+> 2. Added grid attribute, thus adding a composition relationship between Map and CoordinateType
+> 3. Added grid appending / refilling / clearing methods
+> 4. Added grid per coordinate mutators
+> 5. Changed Map::addObstacle(int, int, int, int) void to Map::addObstacle(Obstacle) void
+> 6. Replaced activities with routes attribute, thus removing the composition relationship between Map and Activities and adding an aggregation relationship between Map and Routes
+> 7. Removed accessors and mutators for activities
+> 8. Removed isInRoute(), isInObstacle() methods
+> 9. Removed getNumbOfSteps() method
+> 10. Added accessors and mutators for routes and processed routes
+> 11. changed invariants accordingly
+> 
+> ### Activity
+> 1. removed the avgSpeed attribute
+> 2. removed Activity::endActivity() method
+> 3. changed invariants accordingly
+> 
+> ### Route
+> 1. made Route implement MapFeature
+> 2. replaced getStepsAmount() with getMeasure()
+> 3. removed getCoordinate() method
+> 4. added addCoordinate() method
+> 5. changed invariants accordingly
+> 
+> ### Obstacle
+> 1. removed topLeftCoord and bottomRightCoord attributes
+> 2. added coordinates attribute
+> 3. made Obstacle implement MapFeature
+> 4. added GetCoordinates() and getMeasure() methods
+> 5. changed invariants accordingly
+> 
+> ### Coordinate
+> 1. added type attribute, thus adding a composition relationship between Coordinate and CoordinateType
+> 2. added getLeft(), getRight(), getAbove(), getBelow(), getNeighbours(), and isNeighbourOf() methods
+> 3. changed invariants accordingly
+> 
+> ### Additional
+> 1. added a MapFeature interface that Route and Obstacle implement
+> 2. added a CoordinateType class
+> 
 
 ```mermaid 
 classDiagram
     class Profile {
-        -Map map
         -String name
         -SortedSet~Gear~ gears
+        -SortedSet~Activity~ activities
+        -SortedSet~Profile~ friends
         
         +getName() String
-        +setName() void
-        +getMap() Map
-        +addMap(Map) void
-        +removeMap() void
         +getGears() SortedSet~Gear~
-        +getGear(int) Gear
-        +addGear(Gear) boolean
-        +removeGear(int) void
+        +getGear(String) Gear
+        +addGear(Gear) void
+        +removeGear(Gear) void
+        +getTotalNumSteps(LocalDate, ChronoUnit) int
+        +getActivities(int, int) SortedSet~Activity~
+        +addActivity(Activity) void
+        +removeActivity(int) void
+        +getFriends() Set~Profile~
+        +follow(Profile) void
+        +unfollow(Profile) void
+        +getRoutes() List~ProcessedRoute~
     }
     
     note for Profile"invariants:
@@ -156,10 +366,16 @@ classDiagram
         * name.length >= 1
         * gears != null
         * gears.length >= 1
-        * loop: no entry is null in gears"
+        * loop: no entry is null in gears
+        * activities != null
+        * loop: no entry is null in activities
+        * friends != null
+        * loop: no entry is null in friends
+        "
     
+    Profile --o Profile
     Profile --* Gear
-    Profile --* Map
+    Profile --* Activity
     
     class Gear {
         -GearType type
@@ -185,59 +401,59 @@ classDiagram
     }
     
     class Map {
-        -int width
-        -int length
+        -CoordinateType[][] grid
         -List~Obstacle~ obstacles
-        -SortedSet~Activity~ activities
+        -Set~Route~ routes
         
         +getWidth() int
         +getLength() int
-        +getTotalNumSteps(LocalDate, ChronoUnit) int
+        +getCoordinateType(int, int) CoordinateType
+        +setCoordinateType(int, int) void
         +getObstacles() List~Obstacle~
-        +addObstacle(int, int, int, int) void
+        +addObstacle(Obstacle) void
         +removeObstacle(int) void
-        +getActivities() SortedSet~Activity~
-        +addActivivity(Activity) void
-        +removeActivity(int) void
-        +isInObstacle(int, int) boolean
-        +isInRoute(int, int) boolean
-        +isInRoute(int, int, int) boolean
+        +addRoute(Route) ProcessedRoute
+        +addProcessedRoute(ProcessedRoute) void
+        +addProcessedRoutes(List~ProcessedRoute~) void
+        +clearRoutes() void
+        +appendToGrid(MapFeature) void
+        +refillGrid() void
     }
     
     note for Map"invariants:
-        * width >= 1
-        * length >= 1
+        * grid != null
         * obstacles != null
-        * activities != null
+        * routes != null
+        * loop: no entry is null in grid
         * loop: no entry is null in obstacles
-        * loop: no obstacle is out of boundaries
-        * loop: no entry is null in activities
-        * loop: no activity route is out of boundaries
+        * loop: no obstacle is out of bounds
+        * loop: no entry is null in routes
+        * loop: no route is out of bounds
         * routes and obstacles don't overlap"
-    
+
+    Map --* CoordinateType
     Map --* Obstacle
-    Map --* Activity
+    Map --o Route
     
     class Activity{
         -Gear gear
         -LocalDateTime start
         -LocalDateTime end
-        -Route route
-        -double avgSpeed
+        -ProcessedRoute route
         
         +getAvgSpeed() double
         +getStart() LocalDateTime
         +getEnd() LocalDateTime
         +getGear() Gear
         +getRoute() Route
-        +endActivity() void
     }
     
     note for Activity"invariants:
         * gear != null
         * start != null
+        * end != null
         * route != null
-        * avgSpeed >= 0"
+        * start is before end"
     
     Activity --o Gear
     Activity --* Route
@@ -245,38 +461,72 @@ classDiagram
     class Route {
         -List~Coordinate~ coordinates
         
-        +getStepsAmount() int
-        +getCoordinate(int) Coordinate
+        +getCoordinates() List~Coordinate~
+        +getMeasure() int
+        +addCoordinate(Coordinate) void
         +move(int, int) void
         +contains(int, int) boolean
     }
     
     note for Route"invariants:
         * coordinates != null
-        * coordinates.size() >= 1"
-    
+        * coordinates.size() >= 1
+        * loop: no entry is null in coordinates
+        * loop: all entries in coordinates is of type ROUTE"
+
+    Route ..|> MapFeature
     Route --* Coordinate
     
     class Obstacle {
-        -Coordinate topLeftCoord
-        -Coordinate bottomRightCoord
+        -List~Coordinate~ coordinates
         
+        +getCoordinates() List~Coordinate~
         +contains(int, int) boolean
+        +getMeasure() int
     }
     
     note for Obstacle"invariants:
-        * topLeftCoord != null
-        * bottomRightCoord != null
-        * bottomRightCoord is lower and to the right of topLeftCoord"
+        * coordinates != null
+        * coordinates.size() >= 1
+        * no entry is null in coordinates
+        * loop: all entries in coordinates is of type OBSTACLE"
     
+    Obstacle ..|> MapFeature
     Obstacle --* Coordinate
     
+    class MapFeature {
+        <<interface>>
+        +getCoordinates() List~Coordinate~;
+        getMeasure() int
+        contains(int, int) boolean
+    }
+    
     class Coordinate {
+        -CoordinateType type
         -int x
         -int y
+        
+        +getLeft() Coordinate
+        +getRight() Coordinate
+        +getAbove() Coordinate
+        +getBelow() Coordinate
+        +getNeighbours() Coordinate[]
+        +isNeighbourOf(Coordinate) boolean
     }
     
     note for Coordinate "invariants:
-        * x >= 0
-        * y >= 0"
+        type != null
+    "
+    
+    Coordinate --* CoordinateType
+    
+    class CoordinateType {
+        <<enumeration>>
+        EMPTY,
+        ROUTE,
+        OBSTACLE,
+        VISITED,
+        CURRENT,
+        BORDER
+    }
 ```
