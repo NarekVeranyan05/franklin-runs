@@ -2,6 +2,7 @@ package ca.umanitoba.cs.veranyan.ui;
 
 import ca.umanitoba.cs.veranyan.logic.*;
 import ca.umanitoba.cs.veranyan.model.exceptions.DuplicateActivityException;
+import ca.umanitoba.cs.veranyan.model.exceptions.InvalidDurationException;
 import ca.umanitoba.cs.veranyan.model.exceptions.InvalidTimeRangeException;
 import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.map.Route;
@@ -62,7 +63,7 @@ public class ActivityInsertionScreen {
             activityBuilder.gear(gear);
 
             // insert, select, or find route
-            MapManager.ProcessedRoute route = promptRouteConstruction();
+            Route route = promptRouteConstruction();
             activityBuilder.route(route);
 
             // activities for the same profile must have different start dates
@@ -82,12 +83,12 @@ public class ActivityInsertionScreen {
 
     /**
      * Prompts the user to either create, select, or find {@link Route}.
-     * @return the {@link MapManager.ProcessedRoute} created or selected. Must not be {@code null}.
+     * @return the {@link Route} created or selected. Must not be {@code null}.
      */
-    private MapManager.ProcessedRoute promptRouteConstruction() {
+    private Route promptRouteConstruction() {
         checkActivityInsertionScreen();
 
-        MapManager.ProcessedRoute route = null;
+        Route route = null;
 
         int choice;
         var routeEditorDisplay = new RouteEditorScreen(profileRegistry, mapManager, routeManager, keyboard);
@@ -212,6 +213,7 @@ public class ActivityInsertionScreen {
     /**
      * Prompts the user to provide the start day of month of the {@link Activity}
      * @param builder the builder of {@link Activity} for which to prompt the start day of month
+     * @param monthNumber the month whose day is being prompted
      */
     private void dayOfMonthInsertionScreen(Activity.ActivityBuilder builder, int monthNumber) {
         checkActivityInsertionScreen();
@@ -251,11 +253,12 @@ public class ActivityInsertionScreen {
     /**
      * Prompts the user to provide the start month number of the {@link Activity}
      * @param builder the builder of {@link Activity} for which to prompt start month number
+     * @return the entered month number
      */
     private int monthNumberInsertionScreen(Activity.ActivityBuilder builder) {
         checkActivityInsertionScreen();
 
-        int monthNumber = -1;
+        int monthNumber = 0;
 
         do {
             Colourise.cyan("Enter the month of the start of the activity (as a number from 1 to 12 inclusive): ");
@@ -268,6 +271,7 @@ public class ActivityInsertionScreen {
                 monthNumber = -1;
             } catch (InputMismatchException e) {
                 Colourise.red("Invalid input: you must enter a whole number, e.g. 12\n");
+
                 monthNumber = -1;
             }
 
@@ -293,8 +297,8 @@ public class ActivityInsertionScreen {
             try{
                 durationInMinutes = keyboard.nextInt();
                 builder.durationInMinutes(durationInMinutes);
-            } catch (InvalidTimeRangeException e) {
-                Colourise.red(durationInMinutes + "is not a valid duration. Duration in minutes must be a whole number from 1 to 6000, e.g. 44\n");
+            } catch (InvalidDurationException e) {
+                Colourise.red(durationInMinutes + "is not a valid duration. Duration in minutes must be a whole number from 1 to " + Activity.ActivityBuilder.MAX_DURATION + "\n");
 
                 durationInMinutes = -1;
             } catch (InputMismatchException e) {

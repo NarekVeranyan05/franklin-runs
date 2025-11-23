@@ -14,10 +14,7 @@ import ca.umanitoba.cs.veranyan.output.Colourise;
 import ca.umanitoba.cs.veranyan.output.MapPrinter;
 import com.google.common.base.Preconditions;
 
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Optional;
-import java.util.Scanner;
+import java.util.*;
 
 /**
  * The {@link GearEditorScreen} class manages the UI interaction for managing routes,
@@ -49,13 +46,12 @@ public class RouteEditorScreen {
      * Prompts the user to create a new {@link Route}
      * @return the {@link Route} created.
      */
-    public MapManager.ProcessedRoute routeInsertionScreen() {
+    public Route routeInsertionScreen() {
         checkRouteInsertionDisplay();
 
         mapManager.getMap().clearRoutes();
         new MapPrinter(mapManager.getMap()).print();
         Route route;
-        MapManager.ProcessedRoute processedRoute;
 
         do {
             try {
@@ -64,12 +60,12 @@ public class RouteEditorScreen {
                 ).build();
 
                 // adds the route to the map to process it
-                processedRoute = mapManager.addRoute(route);
+                mapManager.addRoute(route);
             } catch (RouteObstacleOverlapException e) {
                 Colourise.red("The route you wanted to add overlaps with an obstacle.\n");
                 Colourise.red("A valid route is one that does not pass through an obstacle\n");
 
-                processedRoute = null;
+                route = null;
             } catch (CoordinateOutOfBoundsException e) {
                 Colourise.red("The route you wanted to add is out of the map boundaries.\n");
                 Colourise.red("A valid route is one that stays within map boundaries.\n");
@@ -78,15 +74,15 @@ public class RouteEditorScreen {
                     " and length " + mapManager.getMap().getLength() + "\n"
                 );
 
-                processedRoute = null;
+                route = null;
             }
-        } while(processedRoute == null);
+        } while(route == null);
 
-        moveInsertionScreen(processedRoute);
+        moveInsertionScreen(route);
 
         checkRouteInsertionDisplay();
 
-        return processedRoute;
+        return route;
     }
 
     /**
@@ -143,10 +139,9 @@ public class RouteEditorScreen {
      * Prompts the user to insert the move operations on a {@link Route}.
      * @param route the {@link Route} to be moved in.
      */
-    public void moveInsertionScreen(MapManager.ProcessedRoute route){
+    public void moveInsertionScreen(Route route){
         checkRouteInsertionDisplay();
 
-        mapManager.setUpRoute(route);
         var mapPrinter = new MapPrinter(mapManager.getMap());
 
         int choice = promptMoveInsertionChoice();
@@ -172,9 +167,6 @@ public class RouteEditorScreen {
                 Colourise.red("Cannot move in " + numSteps + " steps in that direction because route will go out of map bounds.\n");
             }
 
-            // updating the route to display
-            // no need to remove the route from map since exit upon this method results in valid route
-            mapManager.setUpRoute(route);
             mapPrinter.print();
 
             choice = promptMoveInsertionChoice();
@@ -287,28 +279,27 @@ public class RouteEditorScreen {
     }
 
     /**
-     * Prompts the user to select an existing {@link Route} from their own routes
-     * @return the selected {@link MapManager.ProcessedRoute} wrapped in {@link Optional},
+     * Prompts the user to select the {@link Route} of an existing {@link Activity} from their own routes
+     * @return the selected {@link Route}
      * or an empty {@link Optional} if there are no routes to select from
-     *
      */
-    public Optional<MapManager.ProcessedRoute> routeSelectionScreen(){
+    public Optional<Route> routeSelectionScreen(){
         checkRouteInsertionDisplay();
 
-        Optional<MapManager.ProcessedRoute> result = Optional.empty();
+        Optional<Route> result = Optional.empty();
 
-        // A person should only be able to select from their own previous routes.
-        List<MapManager.ProcessedRoute> routes = profileRegistry.getCurrentProfile().getRoutes();
+        // A person should only be able to select from their own previous activities.
+        List<Activity> activities = profileRegistry.getCurrentProfile().getActivities().stream().toList();
 
-        if(routes.isEmpty()){
+        if(activities.isEmpty()){
             Colourise.red("There are no previous routes to select from.\n");
         }
         else {
-            for (int j = 0; j < routes.size(); j++) {
-                var route = routes.get(j);
+            for (int j = 0; j < activities.size(); j++) {
+                var activity = activities.get(j);
                 System.out.println("Route #" + (j + 1) + ":");
 
-                mapManager.setUpRoute(route);
+                mapManager.setUpActivity(activity);
                 new MapPrinter(mapManager.getMap()).print();
             }
 
@@ -318,7 +309,7 @@ public class RouteEditorScreen {
                 try {
                     choice = keyboard.nextInt();
 
-                    if (choice < 1 || choice > routes.size()) {
+                    if (choice < 1 || choice > activities.size()) {
                         Colourise.red(choice + " does not match with any route.\n");
                         Colourise.red("A valid input is a whole number that matches with a route. Valid inputs are:\n");
 
@@ -334,7 +325,7 @@ public class RouteEditorScreen {
                 keyboard.nextLine();
             } while (choice == 0);
 
-            result = Optional.of(routes.get(choice - 1).clone());
+            result = Optional.of(activities.get(choice - 1).getRoute().clone());
         }
 
         checkRouteInsertionDisplay();

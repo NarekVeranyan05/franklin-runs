@@ -58,7 +58,7 @@ public class FeedScreen {
                     var profileName = profileActivityPair.getFirst();
                     var activity = profileActivityPair.getSecond();
 
-                    mapManager.setUpRoute(activity.getRoute()); // will print only this route
+                    mapManager.setUpActivity(activity); // will print only this route
 
                     // printing profile name
                     System.out.print("Profile: " + profileName);

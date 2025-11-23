@@ -49,7 +49,7 @@ public class GearEditorScreen {
             try{
                 name = promptGearName(builder);
                 var gear = builder.build();
-                profileRegistry.getCurrentProfile().addGear(gear);
+                profileRegistry.addGear(gear);
             } catch (DuplicateGearException e) {
                 Colourise.red("A gear with name " + name + " already exists. Your gear name must be unique.\n");
 

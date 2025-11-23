@@ -1,6 +1,7 @@
 package ca.umanitoba.cs.veranyan.model;
 
 import ca.umanitoba.cs.veranyan.logic.MapManager;
+import ca.umanitoba.cs.veranyan.model.exceptions.InvalidDurationException;
 import ca.umanitoba.cs.veranyan.model.exceptions.InvalidTimeRangeException;
 import ca.umanitoba.cs.veranyan.model.gear.Gear;
 import ca.umanitoba.cs.veranyan.model.map.Map;
@@ -11,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.Year;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 
 /**
  * An {@link Activity} is a class that contains all the information about
@@ -18,12 +20,12 @@ import java.time.YearMonth;
  * for that particular exercise. Activities are stored in the {@link Profile} instance.
  */
 public class Activity implements Comparable<Activity> {
-    private static final int METERS_PER_STEP = 10; // a step is one coordinate on the Map grid.
+    public static final int METERS_PER_STEP = 10; // a step is one coordinate on the Map grid.
 
     private final Gear gear; // the gear to be used in Activity
     private final LocalDateTime start; // the start time of Activity
     private final LocalDateTime end; // Activity end is initialised with null until ended explicitly using endActivity()
-    private final MapManager.ProcessedRoute route;
+    private final Route route; // a valid route
 
     /**
      * Constructor for {@link Activity}
@@ -32,7 +34,7 @@ public class Activity implements Comparable<Activity> {
      * @param start the start date of the {@link Activity}. Must not be {@code null}.
      * @param end the end date of the {@link Activity}. Must not be {@code null}. Must be after {@code start}
      */
-    private Activity(Gear gear, MapManager.ProcessedRoute route, LocalDateTime start, LocalDateTime end) {
+    private Activity(Gear gear, Route route, LocalDateTime start, LocalDateTime end) {
         this.gear = gear;
 
         this.start = start;
@@ -88,7 +90,7 @@ public class Activity implements Comparable<Activity> {
     /**
      * @return the {@link Route} used in the {@link Activity}. Must not be {@code null}.
      */
-    public MapManager.ProcessedRoute getRoute(){
+    public Route getRoute(){
         checkActivity();
 
         return route;
@@ -122,13 +124,15 @@ public class Activity implements Comparable<Activity> {
      * The builder class for {@link Activity}
      */
     public static class ActivityBuilder{
+        public static final long MAX_DURATION = ChronoUnit.WEEKS.getDuration().toMinutes(); // a week (in seconds)
+
         private Gear gear; // the gear to be used in Activity
         private int startMonth;
         private int startDayOfMonth;
         private int startHour;
         private int startMinute;
         private int durationInMinutes;
-        private MapManager.ProcessedRoute route;
+        private Route route;
 
         public ActivityBuilder(){
             this.startMonth = -1;
@@ -155,6 +159,7 @@ public class Activity implements Comparable<Activity> {
          * Sets the month for the {@link Activity} start time
          * @param month the month [1-12] of the start of the {@link Activity}.
          * @return the builder instance
+         * @throws InvalidTimeRangeException if {@code month} is not in range [1,12]
          */
         public ActivityBuilder startMonth(int month) throws InvalidTimeRangeException {
             if(month < 1 || month > 12)
@@ -169,13 +174,14 @@ public class Activity implements Comparable<Activity> {
          * Sets the start day of the month for the {@link Activity} start time
          * @param day the day of the month of the start of the {@link Activity}.
          * @return the builder instance
+         * @throws InvalidTimeRangeException if the day for that month and current year is not valid
          */
         public ActivityBuilder startDayOfMonth(int day) throws InvalidTimeRangeException {
             Preconditions.checkState(startMonth != -1, "startMonth() must be called before startDayOfMonth()");
 
             var yearMonth = YearMonth.of(Year.now().getValue(), startMonth);
 
-            if(day < 1 || day > yearMonth.getMonth().length(yearMonth.isLeapYear()))
+            if(!yearMonth.isValidDay(day))
                 throw new InvalidTimeRangeException();
 
             startDayOfMonth = day;
@@ -187,6 +193,7 @@ public class Activity implements Comparable<Activity> {
          * Sets the start hour for the {@link Activity} start time
          * @param hour the hour of the start of the {@link Activity}.
          * @return the builder instance
+         * @throws InvalidTimeRangeException if {@code hour} is not in range [0,23]
          */
         public ActivityBuilder startHour(int hour) throws InvalidTimeRangeException{
             if(hour < 0 || hour > 23)
@@ -201,6 +208,7 @@ public class Activity implements Comparable<Activity> {
          * Sets the start minute for the {@link Activity} start time
          * @param minute the minute of the start of the {@link Activity}.
          * @return the builder instance
+         * @throws InvalidTimeRangeException if {@code minute} is not in range [0,59]
          */
         public ActivityBuilder startMinute(int minute) throws InvalidTimeRangeException{
             if(minute < 0 || minute > 59)
@@ -215,10 +223,11 @@ public class Activity implements Comparable<Activity> {
          * Sets the duration for the {@link Activity}, in minutes
          * @param duration the duration, in minutes
          * @return the builder instance
+         * @throws InvalidDurationException if {@code duration} is less than or equal to 0 or greater than {@code MAX_DURATION}
          */
-        public ActivityBuilder durationInMinutes(int duration) throws InvalidTimeRangeException{
-            if(duration <= 0 || duration > 6000)
-                throw new InvalidTimeRangeException();
+        public ActivityBuilder durationInMinutes(int duration) throws InvalidDurationException {
+            if(duration <= 0 || duration > MAX_DURATION)
+                throw new InvalidDurationException();
 
             durationInMinutes = duration;
 
@@ -230,7 +239,7 @@ public class Activity implements Comparable<Activity> {
          * @param route the {@link Route} of the {@link Activity}
          * @return the builder instance
          */
-        public ActivityBuilder route(MapManager.ProcessedRoute route){
+        public ActivityBuilder route(Route route){
             Preconditions.checkNotNull(route, "route cannot be null");
 
             this.route = route;

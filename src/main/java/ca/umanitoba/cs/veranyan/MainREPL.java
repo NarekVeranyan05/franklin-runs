@@ -18,8 +18,11 @@ import ca.umanitoba.cs.veranyan.output.ActivityPrinter;
 import ca.umanitoba.cs.veranyan.output.GearPrinter;
 import ca.umanitoba.cs.veranyan.output.MapPrinter;
 import ca.umanitoba.cs.veranyan.output.ObstaclePrinter;
+import ca.umanitoba.cs.veranyan.persistence.json.ObstaclePersistenceJson;
+import ca.umanitoba.cs.veranyan.persistence.json.ProfilePersistenceJson;
 import ca.umanitoba.cs.veranyan.ui.ActivityInsertionScreen;
 
+import java.nio.file.Path;
 import java.util.Scanner;
 
 /**
@@ -32,8 +35,11 @@ public class MainREPL {
     private static Profile profile;
     private static final Map map = Map.getInstance();
 
-    private static final ProfileRegistry profileRegistry = new ProfileRegistry();
-    private static final MapManager mapManager = new MapManager(map);
+    private static final ProfilePersistenceJson profilePersistence = new ProfilePersistenceJson(Path.of("profiles.json"));
+    private static final ObstaclePersistenceJson obstaclePersistence = new ObstaclePersistenceJson(Path.of("obstacles.json"));
+
+    private static final ProfileRegistry profileRegistry = new ProfileRegistry(profilePersistence);
+    private static final MapManager mapManager = new MapManager(obstaclePersistence, Map.getInstance());
     private static final RouteManager routeManager = new RouteManager(map);
 
     /**
@@ -239,12 +245,12 @@ public class MainREPL {
      * Takes input from the standard output stream (System.in).
      */
     private static void showActivity() {
-        if(!profile.getRoutes().isEmpty()){
+        if(!profile.getActivities().isEmpty()){
             showActivities();
             int activityNumber = promptInt("Enter selected activity number");
 
             map.clearRoutes();
-            map.addProcessedRoute(profile.getRoutes().get(activityNumber - 1));
+            map.addActivity(profile.getActivities().stream().toList().get(activityNumber - 1));
             new MapPrinter(map).print();
         }
         else System.out.println("There are no activities added yet.");

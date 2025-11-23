@@ -20,4 +20,12 @@ public class Colourise {
         System.out.printf("\u001B[36m%s\u001B[0m", message);
     }
 
+    /**
+     * Prints the given message in green to the standard output stream (`System.out`)
+     * @param message the message to print
+     */
+    public static void green(String message){
+        System.out.printf("\u001B[32m%s\u001B[0m", message);
+    }
+
 }

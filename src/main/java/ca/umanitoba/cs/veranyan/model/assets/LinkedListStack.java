@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions;
  * LinkedList implementation of the {@link Stack} interface
  * @param <T>
  */
-public class LinkedListStack<T> implements Stack<T> {
+public class LinkedListStack<T> implements Stack<T>{
     private final T placeholder;
     private Node top;
     private int size;

@@ -3,9 +3,15 @@ package ca.umanitoba.cs.veranyan;
 import ca.umanitoba.cs.veranyan.logic.MapManager;
 import ca.umanitoba.cs.veranyan.logic.ProfileRegistry;
 import ca.umanitoba.cs.veranyan.logic.RouteManager;
+import ca.umanitoba.cs.veranyan.logic.exceptions.DuplicateProfileException;
+import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
+import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.model.map.Map;
+import ca.umanitoba.cs.veranyan.persistence.json.ObstaclePersistenceJson;
+import ca.umanitoba.cs.veranyan.persistence.json.ProfilePersistenceJson;
 import ca.umanitoba.cs.veranyan.ui.MainMenu;
 
+import java.nio.file.Path;
 import java.util.Scanner;
 
 /**
@@ -15,11 +21,21 @@ import java.util.Scanner;
  */
 public class Main {
     public static void main(String[] args) {
-        ProfileRegistry profileRegistry = new ProfileRegistry();
+        ProfilePersistenceJson profilePersistence = new ProfilePersistenceJson(Path.of("profiles.json"));
+        ObstaclePersistenceJson obstaclePersistence = new ObstaclePersistenceJson(Path.of("obstacles.json"));
 
-        MapManager mapManager = new MapManager(
-                Map.getInstance()
-        );
+        ProfileRegistry profileRegistry = new ProfileRegistry(profilePersistence);
+        MapManager mapManager = new MapManager(obstaclePersistence, Map.getInstance());
+
+        try {
+            for (var profile : profilePersistence.loadProfiles())
+                profileRegistry.addProfile(profile);
+
+            for(var obstacle : obstaclePersistence.loadObstacles())
+                mapManager.addObstacle(obstacle);
+        } catch (DuplicateProfileException | CoordinateOutOfBoundsException | RouteObstacleOverlapException e) {
+            e.printStackTrace(); // FIXME is this ok?
+        }
 
         RouteManager routeManager = new RouteManager(
                 Map.getInstance()

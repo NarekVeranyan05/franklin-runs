@@ -5,6 +5,8 @@ import ca.umanitoba.cs.veranyan.logic.exceptions.*;
 import ca.umanitoba.cs.veranyan.model.exceptions.*;
 import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.Profile;
+import ca.umanitoba.cs.veranyan.model.gear.Gear;
+import ca.umanitoba.cs.veranyan.persistence.ProfilePersistence;
 import com.google.common.base.Preconditions;
 
 import java.util.*;
@@ -14,12 +16,15 @@ import java.util.stream.Collectors;
  * {@link ProfileRegistry} manages the business logic of keeping multiple profiles within the same system.
  */
 public class ProfileRegistry {
+    private final ProfilePersistence profilePersistence;
 
     private final SortedSet<Profile> profiles;
     private Profile currentProfile;
     private Status loginStatus;
 
-    public ProfileRegistry(){
+    public ProfileRegistry(ProfilePersistence profilePersistence){
+        this.profilePersistence = profilePersistence;
+
         profiles = new TreeSet<>(
             (o1, o2) -> o1.getName().compareToIgnoreCase(o2.getName())
         );
@@ -125,6 +130,8 @@ public class ProfileRegistry {
 
         profiles.add(profile);
 
+        profilePersistence.save(profile);
+
         checkProfileRegistry();
     }
 
@@ -132,12 +139,12 @@ public class ProfileRegistry {
      * @param type the filter setting for activities
      * @return all the activities filtered by type
      */
-    public SortedSet<Pair<String, Activity>> getActivities(ActivityFilterType type) {
+    public List<Pair<String, Activity>> getActivities(ActivityFilterType type) {
         Preconditions.checkNotNull(type, "type cannot be null");
         Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
         checkProfileRegistry();
 
-        SortedSet<Pair<String, Activity>> filteredActivities = new TreeSet<>(Comparator.comparing(Pair::getSecond));
+        List<Pair<String, Activity>> filteredActivities = new ArrayList<>();
 
         switch (type){
             case OWN -> {
@@ -169,9 +176,27 @@ public class ProfileRegistry {
             }
         }
 
+        filteredActivities.sort(Comparator.comparing(Pair::getSecond));
+
         checkProfileRegistry();
 
         return filteredActivities;
+    }
+
+    /**
+     * Adds the new {@link Gear} to the current {@link Profile} in the system
+     * @param gear the {@link Gear} to add
+     * @throws DuplicateGearException if a {@link Gear} with the same name was previously added to the current {@link Profile}
+     */
+    public void addGear(Gear gear) throws DuplicateGearException {
+        Preconditions.checkNotNull(gear, "gear cannot be null");
+        Preconditions.checkState(checkStatus(Status.ONLINE), "profile status must be online");
+        checkProfileRegistry();
+
+        currentProfile.addGear(gear);
+        profilePersistence.save(currentProfile);
+
+        checkProfileRegistry();
     }
 
     /**
@@ -185,6 +210,8 @@ public class ProfileRegistry {
         checkProfileRegistry();
 
         currentProfile.addActivity(activity);
+
+        profilePersistence.save(currentProfile);
 
         checkProfileRegistry();
     }
@@ -234,6 +261,7 @@ public class ProfileRegistry {
         checkProfileRegistry();
 
         currentProfile.follow(other);
+        profilePersistence.save(currentProfile);
     }
 
     /**
@@ -249,6 +277,7 @@ public class ProfileRegistry {
         checkProfileRegistry();
 
         currentProfile.unfollow(other);
+        profilePersistence.save(currentProfile);
     }
 
     /**

@@ -175,25 +175,6 @@ public class Route implements MapFeature, Cloneable {
         private final List<Coordinate> coordinates = new ArrayList<>();
 
         /**
-         * Adds a valid {@link Coordinate} to the {@link Route}. You can add a valid {@link Coordinate} only if you
-         * have not previously added a regular coordinate. After adding a valid coordinate, you can no longer add
-         * a regular coordinate.
-         * @param coordinate the valid coordinate to add
-         * @return the builder instance
-         */
-        public RouteBuilder withProcessedCoordinate(Coordinate coordinate) {
-            Preconditions.checkState(coordinates.isEmpty(), "cannot add validCoordinates and violate the expected behaviour that not all coordinates are valid");
-            Preconditions.checkNotNull(coordinate, "coordinate cannot be null");
-            Preconditions.checkState(coordinate.type() == CoordinateType.ROUTE, "finalCoordinate must be of CoordinateType ROUTE");
-            Preconditions.checkState(coordinate.x() >= 1, "the x-coordinate must be greater than or equal to 1");
-            Preconditions.checkState(coordinate.y() >= 1, "the y-coordinate must be greater than or equal to 1");
-
-            validCoordinates.add(coordinate);
-
-            return this;
-        }
-
-        /**
          * Adds an additional {@link Coordinate} to the {@link Route}
          * @param coordinate the coordinate to add
          * @return the builder instance

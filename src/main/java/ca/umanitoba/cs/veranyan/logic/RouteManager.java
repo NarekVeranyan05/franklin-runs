@@ -1,5 +1,6 @@
 package ca.umanitoba.cs.veranyan.logic;
 
+import ca.umanitoba.cs.veranyan.model.map.Route;
 import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.model.map.Map;
@@ -25,14 +26,14 @@ public class RouteManager {
     }
 
     /**
-     * Moves through the {@link Map} for the given {@link MapManager.ProcessedRoute}
-     * @param route the {@link MapManager.ProcessedRoute} to modify when moving
+     * Moves through the {@link Map} for the given {@link Route}
+     * @param route the {@link Route} to modify when moving
      * @param direction the direction to move [UP = {@code 1}, RIGHT = {@code 2}, DOWN = {@code 3}, LEFT = {@code 4}].
      * @param numSteps the number of steps to move in the given direction
-     * @throws RouteObstacleOverlapException if the {@link Obstacle} overlaps with the {@link MapManager.ProcessedRoute} if moving in the indicated way
-     * @throws CoordinateOutOfBoundsException if the {@link MapManager.ProcessedRoute} is out of {@link Map} boundaries if moving in the indicated way
+     * @throws RouteObstacleOverlapException if the {@link Obstacle} overlaps with the {@link Route} if moving in the indicated way
+     * @throws CoordinateOutOfBoundsException if the {@link Route} is out of {@link Map} boundaries if moving in the indicated way
      */
-    public void doMove(MapManager.ProcessedRoute route, int direction, int numSteps) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
+    public void doMove(Route route, int direction, int numSteps) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
         Preconditions.checkNotNull(route, "moveIn cannot be null");
         Preconditions.checkState(direction >= UP && direction <= LEFT, "direction should be in the range of [1, 4]");
         Preconditions.checkState(numSteps >= 0, "numSteps cannot be negative");
@@ -90,6 +91,8 @@ public class RouteManager {
                 route.move(direction, numSteps);
             }
         }
+
+        map.refillGrid(); // updates map grid with modified route
 
         checkRouteManager();
     }

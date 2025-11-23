@@ -2,6 +2,7 @@ package ca.umanitoba.cs.veranyan.logic;
 
 import ca.umanitoba.cs.veranyan.logic.exceptions.EndCoordOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.logic.exceptions.StartCoordOutOfBoundsException;
+import ca.umanitoba.cs.veranyan.model.Activity;
 import ca.umanitoba.cs.veranyan.model.assets.Stack;
 import ca.umanitoba.cs.veranyan.model.assets.LinkedListStack;
 import ca.umanitoba.cs.veranyan.model.Profile;
@@ -221,17 +222,18 @@ public class PathFinder {
      * Sets up all the routes on the {@link Map} to find a {@link Route} from
      * @param includeFriends indicates whether to include friends' routes or only the current {@link Profile} routes
      */
+    // TODO
     private void setUpRoutes(boolean includeFriends) {
         checkPathFinder();
 
-        var routesToConsider = currentProfile.getRoutes();
+        List<Activity> activitiesToConsider = new ArrayList<>(currentProfile.getActivities().stream().toList());
         if(includeFriends){
             for(var friend : currentProfile.getFriends())
-                routesToConsider.addAll(friend.getRoutes());
+                activitiesToConsider.addAll(friend.getActivities().stream().toList());
         }
 
         map.clearRoutes();
-        map.addProcessedRoutes(routesToConsider);
+        map.addActivities(activitiesToConsider);
 
         checkPathFinder();
     }

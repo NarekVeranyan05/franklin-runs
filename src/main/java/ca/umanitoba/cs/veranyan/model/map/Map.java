@@ -1,14 +1,10 @@
 package ca.umanitoba.cs.veranyan.model.map;
 
-import ca.umanitoba.cs.veranyan.logic.MapManager;
-import ca.umanitoba.cs.veranyan.logic.exceptions.DuplicateProfileException;
 import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.model.Activity;
-import ca.umanitoba.cs.veranyan.model.map.coordinate.Coordinate;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
 import com.google.common.base.Preconditions;
-import jdk.jshell.spi.SPIResolutionException;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -128,7 +124,7 @@ public class Map{
         }
 
         obstacles.add(obstacle);
-        appendToGrid(obstacle);
+        addToGrid(obstacle);
 
         checkMap();
     }
@@ -164,39 +160,38 @@ public class Map{
         }
 
         routes.add(route);
-        appendToGrid(route);
+        addToGrid(route);
 
         checkMap();
     }
 
     /**
-     * Adds a {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} to the {@link Map}
-     * @param processedRoute the {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} to add
+     * Adds the {@link Route} of an {@link Activity} to the {@link Map}
+     * @param activity the {@link Activity} whose {@link Route} will be added to the map
+     * @implNote the {@link Route} of the {@code activity} has been validated
      */
-    public void addProcessedRoute(MapManager.ProcessedRoute processedRoute){
-        Preconditions.checkNotNull(processedRoute, "processedRoute cannot be null");
+    public void addActivity(Activity activity){
+        Preconditions.checkNotNull(activity, "activity cannot be null");
         checkMap();
 
-        routes.add(processedRoute.getRoute());
-        appendToGrid(processedRoute.getRoute());
+        routes.add(activity.getRoute());
+        addToGrid(activity.getRoute());
 
         checkMap();
     }
 
     /**
-     * Adds all the {@link ca.umanitoba.cs.veranyan.logic.MapManager.ProcessedRoute} objects in the list to the {@link Map}
-     * @param processedRoutes the list of processed routes to add
+     * Adds the routes of all the given activities to the map
+     * @param activities the activities whose routes will be added to the map
      */
-    public void addProcessedRoutes(List<MapManager.ProcessedRoute> processedRoutes){
-        Preconditions.checkNotNull(processedRoutes, "processedRoutes cannot be null");
-        Preconditions.checkState(!processedRoutes.contains(null), "processedRoutes entry cannot be null");
+    public void addActivities(List<Activity> activities){
+        Preconditions.checkNotNull(activities, "activities cannot be null");
+        Preconditions.checkState(!activities.contains(null), "activities entry cannot be null");
         checkMap();
 
-        // feature getType cannot be EMPTY (class invariant checks for it)
-        for(var processedRoute : processedRoutes) {
-            routes.add(processedRoute.getRoute());
-            addProcessedRoute(processedRoute);
-            appendToGrid(processedRoute.getRoute());
+        for(var activity : activities) {
+            routes.add(activity.getRoute());
+            addToGrid(activity.getRoute());
         }
 
         checkMap();
@@ -220,7 +215,7 @@ public class Map{
      * Fills corresponding grid entries to represent the feature
      * @param feature the feature to add to the map grid
      */
-    public void appendToGrid(MapFeature feature){
+    public void addToGrid(MapFeature feature){
         Preconditions.checkNotNull(feature, "feature cannot be null");
         checkMap();
 
