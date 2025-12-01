@@ -1,5 +1,6 @@
 package ca.umanitoba.cs.veranyan.model.map;
 
+import ca.umanitoba.cs.veranyan.logic.MapManager;
 import ca.umanitoba.cs.veranyan.logic.exceptions.RouteObstacleOverlapException;
 import ca.umanitoba.cs.veranyan.model.exceptions.CoordinateOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.model.Activity;
@@ -90,8 +91,7 @@ public class Map{
      * @param y the y-coordinate
      */
     public void setCoordinateType(CoordinateType type, int x, int y){
-        Preconditions.checkState(x >= 1 && x <= Map.MAP_LENGTH, "x coordinate must be within map bounds");
-        Preconditions.checkState(y >= 1 && y <= MAP_WIDTH, "y coordinate must be within map bounds");
+        Preconditions.checkNotNull(type, "type cannot be null");
         checkMap();
 
         grid[x][y] = type;
@@ -198,6 +198,23 @@ public class Map{
     }
 
     /**
+     * Adds all the processed routes to the map
+     * @param processedRoutes the processed routes to add
+     */
+    public void addProcessedRoutes(List<MapManager.ProcessedRoute> processedRoutes){
+        Preconditions.checkNotNull(processedRoutes, "processedRoutes cannot be null");
+        Preconditions.checkState(!processedRoutes.contains(null), "processedRoutes entry cannot be null");
+        checkMap();
+
+        for(var processedRoute : processedRoutes) {
+            routes.add(processedRoute.getRoute());
+            addToGrid(processedRoute.getRoute());
+        }
+
+        checkMap();
+    }
+
+    /**
      * Removes all the routes from the {@link Map}
      * Refills the grid leaving no routes
      * @implNote obstacles are not cleared
@@ -215,7 +232,7 @@ public class Map{
      * Fills corresponding grid entries to represent the feature
      * @param feature the feature to add to the map grid
      */
-    public void addToGrid(MapFeature feature){
+    private void addToGrid(MapFeature feature){
         Preconditions.checkNotNull(feature, "feature cannot be null");
         checkMap();
 

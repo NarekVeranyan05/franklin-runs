@@ -7,6 +7,7 @@ import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -171,7 +172,6 @@ public class Route implements MapFeature, Cloneable {
      * Builder class for {@link Route}
      */
     public static class RouteBuilder{
-        private final List<Coordinate> validCoordinates = new ArrayList<>();
         private final List<Coordinate> coordinates = new ArrayList<>();
 
         /**
@@ -180,7 +180,6 @@ public class Route implements MapFeature, Cloneable {
          * @return the builder instance
          */
         public RouteBuilder withCoordinate(Coordinate coordinate) throws CoordinateOutOfBoundsException{
-            Preconditions.checkState(validCoordinates.isEmpty(), "cannot add regular coordinates and violate the expected behaviour that all coordinates are valid");
             Preconditions.checkNotNull(coordinate, "coordinate cannot be null");
             Preconditions.checkState(coordinate.type() == CoordinateType.ROUTE, "finalCoordinate must be of CoordinateType ROUTE");
 
@@ -193,14 +192,13 @@ public class Route implements MapFeature, Cloneable {
         }
 
         public Route build(){
-            Preconditions.checkState(!coordinates.isEmpty() || !validCoordinates.isEmpty(), "either coordinates or validCoordinates must be non-empty");
+            Preconditions.checkState(!coordinates.isEmpty(), "coordinates must be non-empty");
+            Collections.sort(coordinates);
 
-            var coords = validCoordinates.isEmpty() ? coordinates : validCoordinates;
+            var route = new Route(coordinates.get(0).x(), coordinates.get(0).y());
 
-            var route = new Route(coords.get(0).x(), coords.get(0).y());
-
-            coords.remove(0);
-            for (var coord : coords) {
+            coordinates.remove(0);
+            for (var coord : coordinates) {
                 route.addCoordinate(coord);
             }
 

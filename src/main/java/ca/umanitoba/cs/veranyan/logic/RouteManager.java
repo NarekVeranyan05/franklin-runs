@@ -34,7 +34,7 @@ public class RouteManager {
      * @throws CoordinateOutOfBoundsException if the {@link Route} is out of {@link Map} boundaries if moving in the indicated way
      */
     public void doMove(Route route, int direction, int numSteps) throws RouteObstacleOverlapException, CoordinateOutOfBoundsException {
-        Preconditions.checkNotNull(route, "moveIn cannot be null");
+        Preconditions.checkNotNull(route, "route cannot be null");
         Preconditions.checkState(direction >= UP && direction <= LEFT, "direction should be in the range of [1, 4]");
         Preconditions.checkState(numSteps >= 0, "numSteps cannot be negative");
         checkRouteManager();

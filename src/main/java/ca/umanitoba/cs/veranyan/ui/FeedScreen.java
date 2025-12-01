@@ -110,7 +110,7 @@ public class FeedScreen {
             try {
                 filterTypeInput = keyboard.nextLine().trim();
 
-                if(!filterTypeInput.equalsIgnoreCase("all"))
+                if(!filterTypeInput.equalsIgnoreCase("all")) // FIXME how to test?
                     filterType = ProfileRegistry.ActivityFilterType.fromString(filterTypeInput);
                 else {
                     filterType = null;

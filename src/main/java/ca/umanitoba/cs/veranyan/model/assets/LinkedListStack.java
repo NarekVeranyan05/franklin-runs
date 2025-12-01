@@ -1,5 +1,6 @@
 package ca.umanitoba.cs.veranyan.model.assets;
 
+import ca.umanitoba.cs.comp2450.stack.Stack;
 import com.google.common.base.Preconditions;
 
 /**

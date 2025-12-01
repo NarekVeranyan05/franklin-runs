@@ -199,7 +199,7 @@ public class ProfilePersistenceJson implements ProfilePersistence {
                 for (var profileName : profilesJson.keySet()){
                     var profileJson = profilesJson.getJsonObject(profileName);
 
-                    var profileBuilder = new Profile.ProfileBuilder().name(profileName);
+                    var profile = new Profile.ProfileBuilder().name(profileName).build();
 
                     java.util.Map<String, Gear> gears = new HashMap<>();
 
@@ -207,17 +207,17 @@ public class ProfilePersistenceJson implements ProfilePersistence {
                     for(JsonValue gearJson : profileJson.getJsonArray("gears")){
                         var gear = gearFromJson(gearJson.asJsonObject());
                         gears.put(gear.getName(), gear);
-                        profileBuilder.withGear(gear);
+                        profile.addGear(gear);
                     }
 
                     // activities of the profile
                     for(JsonValue activityJson : profileJson.getJsonArray("activities")){
-                        profileBuilder.withActivity(activityFromJson(gears, activityJson.asJsonObject()));
+                        profile.addActivity(activityFromJson(gears, activityJson.asJsonObject()));
                     }
 
                     profiles.put(
                             profileName,
-                            profileBuilder.buildWithActivityGear() // FIXME can I have this?
+                            profile
                     );
                 }
 

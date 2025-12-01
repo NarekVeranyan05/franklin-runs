@@ -7,7 +7,6 @@ import ca.umanitoba.cs.veranyan.model.map.Map;
 import ca.umanitoba.cs.veranyan.model.map.Obstacle;
 import ca.umanitoba.cs.veranyan.model.map.Route;
 import ca.umanitoba.cs.veranyan.persistence.ObstaclePersistence;
-import ca.umanitoba.cs.veranyan.persistence.RoutePersistence;
 import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
@@ -19,12 +18,12 @@ import java.util.List;
 public class MapManager {
     private final Map map;
     private final ObstaclePersistence obstaclePersistence;
-    private final List<Activity> addedActivities;
+    private final List<ProcessedRoute> processedRoutes;
 
     public MapManager(ObstaclePersistence obstaclePersistence, Map map){
         this.obstaclePersistence = obstaclePersistence;
         this.map = map;
-        this.addedActivities = new ArrayList<>();
+        this.processedRoutes = new ArrayList<>();
 
         checkMapManager();
     }
@@ -60,6 +59,7 @@ public class MapManager {
         checkMapManager();
 
         map.addRoute(route);
+        processedRoutes.add(new ProcessedRoute(route));
 
         checkMapManager();
     }
@@ -76,7 +76,7 @@ public class MapManager {
 
         // need to consider all the previous routes
         map.clearRoutes();
-        map.addActivities(addedActivities);
+        map.addProcessedRoutes(processedRoutes);
 
         map.addObstacle(obstacle);
         obstaclePersistence.save(obstacle);
@@ -89,5 +89,43 @@ public class MapManager {
      */
     private void checkMapManager(){
         Preconditions.checkNotNull(map, "map cannot be null");
+    }
+
+    /**
+     * A {@link ProcessedRoute} is a wrapper for a {@link Route} that was successfully added
+     * to the {@link Map}, passing all validation
+     */
+    public static class ProcessedRoute {
+        Route processedRoute;
+
+        private ProcessedRoute(Route route){
+            Preconditions.checkNotNull(route, "route cannot be null");
+            for(var coord : route.getCoordinates()){
+                Preconditions.checkState(coord.x() >= 1 &&
+                        coord.x() <= Map.getInstance().getLength() &&
+                        coord.y() >= 1 &&
+                        coord.y() <= Map.getInstance().getWidth(), "validated route cannot be out of map bounds");
+
+            }
+            this.processedRoute = route;
+
+            checkProcessedRoute();
+        }
+
+        /**
+         * @return the {@link Route} that's wrapped around
+         */
+        public Route getRoute(){
+            checkProcessedRoute();
+
+            return this.processedRoute;
+        }
+
+        /**
+         * Class Invariants for {@link ProcessedRoute}
+         */
+        private void checkProcessedRoute(){
+            Preconditions.checkNotNull(processedRoute, "processedRoute cannot be null");
+        }
     }
 }

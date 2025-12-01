@@ -10,29 +10,30 @@ import ca.umanitoba.cs.veranyan.model.map.coordinate.Coordinate;
 import ca.umanitoba.cs.veranyan.model.map.coordinate.CoordinateType;
 import ca.umanitoba.cs.veranyan.output.Colourise;
 import ca.umanitoba.cs.veranyan.tests.TestResults;
-import com.github.lalyos.jfiglet.FigletFont;
 
-import java.io.IOException;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.Year;
+import java.time.temporal.ChronoUnit;
+
+import static ca.umanitoba.cs.veranyan.tests.TestHarness.bubblePrint;
 
 public class ProfileTestHarness {
-    private static int successes = 0;
-    private static int failures = 0;
+    private int successes = 0;
+    private int failures = 0;
 
     public TestResults runTests() {
-        bubblePrint("Profile Test!");
+        bubblePrint("Profile Test Harness");
 
         testInvalidName();
         testCreateProfile();
 
-        testFollow();
-        testInvalidFollowSelf();
-        testInvalidFollowAlreadyFriend();
+        testGetTotalNumbOfStepsMonth();
+        testGetTotalNumbOfStepsWeek();
 
-        testUnfollow();
-        testInvalidUnfollowSelf();
-        testInvalidUnfollowNonFriend();
-
-        testAddActivity();
+        testGetGear();
+        testGetGearEmpty();
+        testRemoveGear();
 
         bubblePrint("Test results");
         System.out.printf("Total tests: %d\n", successes + failures);
@@ -49,7 +50,7 @@ public class ProfileTestHarness {
     }
 
     // this is my happy path:
-    public static void testCreateProfile() {
+    public void testCreateProfile() {
         var builder = new Profile.ProfileBuilder();
 
         try {
@@ -66,29 +67,26 @@ public class ProfileTestHarness {
         }
     }
 
-    public static void testAddActivity() {
-        Activity activity = null;
-        try{
-            activity = new Activity.ActivityBuilder().route(
-                        new Route.RouteBuilder().withCoordinate(
-                                new Coordinate(CoordinateType.ROUTE, 1, 1)).build()
-                        ).gear(new Gear.GearBuilder().type(GearType.ELECTRIC_BIKE).name("N").avgSpeed(120).build()).
-                        startMonth(11).startDayOfMonth(11).startHour(11).startMinute(11).durationInMinutes(11).build();
-        } catch (CoordinateOutOfBoundsException | BlankNameException | NonPositiveSpeedException |
-                 InvalidTimeRangeException | InvalidDurationException e){
+    public void testRemoveGear(){
+        Gear gear = null;
+        try {
+            gear = new Gear.GearBuilder().type(GearType.ROAD_BIKE).name("name1").avgSpeed(120).build();
+        } catch (BlankNameException | NonPositiveSpeedException e) {
             fail("Unexpected exception thrown: ");
             e.printStackTrace();
         }
 
         var builder = new Profile.ProfileBuilder();
+        Profile profile = null;
 
         try{
-            var profile = builder.name("Narek").build();
-            profile.addActivity(activity);
-
-            if(profile.getActivities().contains(activity))
-                pass("Activity successfully added");
-            else fail("Was expected to add the activity to the profile");
+            profile = builder.name("Narek").build();
+            profile.addGear(gear);
+            profile.removeGear(gear);
+        } catch (DuplicateGearException e) {
+            if(!profile.getGears().contains(gear))
+                pass("Gear successfully removed");
+            else fail("Was expected to remove gear from the profile");
         }
         catch (Exception e) {
             fail("Exception thrown during valid input.");
@@ -96,118 +94,51 @@ public class ProfileTestHarness {
         }
     }
 
-    public static void testFollow(){
-        var builder1 = new Profile.ProfileBuilder();
-        var builder2 = new Profile.ProfileBuilder();
-
-        try{
-            var profile1 = builder1.name("Narek").build();
-            var profile2 = builder2.name("Arthur").build();
-            profile1.follow(profile2);
-
-            if(profile1.getFriends().contains(profile2)){
-               pass("Successfully added Arthur as friend");
-            } else{
-                fail("Arthur was not a friend of Narek as expected");
-            }
-        } catch (Exception e) {
-            fail("Exception thrown during valid input.");
+    private void testGetGear(){
+        Gear gear = null;
+        try {
+            gear = new Gear.GearBuilder().type(GearType.ROAD_BIKE).name("name1").avgSpeed(120).build();
+        } catch (BlankNameException | NonPositiveSpeedException e) {
+            fail("Unexpected exception thrown: ");
             e.printStackTrace();
         }
-    }
 
-    public static void testInvalidFollowSelf(){
         var builder = new Profile.ProfileBuilder();
+        Profile profile = null;
 
         try{
-            var profile = builder.name("Narek").build();
-            profile.follow(profile);
+            profile = builder.name("Narek").build();
+            profile.addGear(gear);
+            var gear2 = profile.getGear("name1");
 
-            fail("Exception was not thrown as expected");
-        } catch (CannotFollowSelfException e){
-            pass("Successfully rejected following self");
-        }
-        catch (Exception e) {
+            if(gear == gear2)
+                pass("Successfully found gear with matching name");
+        } catch (GearNotFoundException e) {
+            pass("Was expected to find the gear with name1");
+        } catch (Exception e){
             fail("Exception thrown during valid input.");
             e.printStackTrace();
         }
     }
 
-    public static void testInvalidFollowAlreadyFriend(){
-        var builder1 = new Profile.ProfileBuilder();
-        var builder2 = new Profile.ProfileBuilder();
-
-        try{
-            var profile1 = builder1.name("Narek").build();
-            var profile2 = builder2.name("Arthur").build();
-            profile1.follow(profile2);
-            profile1.follow(profile2);
-
-            fail("Exception was not thrown as expected");
-        } catch (CannotFollowAgainException e){
-            pass("Successfully rejected following a friend again");
-        }
-        catch (Exception e) {
-            fail("Exception thrown during valid input.");
-            e.printStackTrace();
-        }
-    }
-
-    public static void testUnfollow(){
-        var builder1 = new Profile.ProfileBuilder();
-        var builder2 = new Profile.ProfileBuilder();
-
-        try{
-            var profile1 = builder1.name("Narek").build();
-            var profile2 = builder2.name("Arthur").build();
-            profile1.follow(profile2);
-            profile1.unfollow(profile2);
-
-            pass("Successfully removed Arthur from Narek's friends");
-        } catch (Exception e) {
-            fail("Exception thrown during valid input.");
-            e.printStackTrace();
-        }
-    }
-
-    public static void testInvalidUnfollowSelf(){
+    private void testGetGearEmpty(){
         var builder = new Profile.ProfileBuilder();
+        Profile profile = null;
 
         try{
-            var profile = builder.name("Narek").build();
-            profile.unfollow(profile);
+            profile = builder.name("Narek").build();
+            profile.getGear("no_such_gear");
 
-            fail("Exception was not thrown as expected");
-        } catch (CannotUnfollowSelfException e){
-            pass("Successfully rejected unfollowing self");
-        }
-        catch (Exception e) {
+            fail("Should not have succeeded in getting non-existent gear");
+        } catch (GearNotFoundException e) {
+            pass("Did not find the gear, as expected");
+        } catch (Exception e){
             fail("Exception thrown during valid input.");
             e.printStackTrace();
         }
     }
 
-    public static void testInvalidUnfollowNonFriend(){
-        var builder1 = new Profile.ProfileBuilder();
-        var builder2 = new Profile.ProfileBuilder();
-
-        try{
-            var profile1 = builder1.name("Narek").build();
-            var profile2 = builder2.name("Arthur").build();
-
-            profile1.unfollow(profile2);
-
-            fail("Exception was not thrown as expected");
-        } catch (CannotUnfollowNonFriendException e){
-            pass("Successfully rejected unfollowing non-friend");
-        }
-        catch (Exception e) {
-            fail("Exception thrown during valid input.");
-            e.printStackTrace();
-        }
-    }
-
-    public static void testInvalidName() {
+    public void testInvalidName() {
         var builder = new Profile.ProfileBuilder();
 
         try {
@@ -222,22 +153,113 @@ public class ProfileTestHarness {
         }
     }
 
-    // FIXME add withGear, withActivity, withFriend validations
+    public void testGetTotalNumbOfStepsMonth(){
+        Activity activity1 = null;
+        Activity activity2 = null;
+        try{
+            activity1 = new Activity.ActivityBuilder().route(
+                            new Route.RouteBuilder()
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 1, 1))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 2, 2))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 3, 3))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 5, 4)).build()
+                    ).gear(new Gear.GearBuilder().type(GearType.ELECTRIC_BIKE).name("N").avgSpeed(120).build()).
+                    startMonth(11).startDayOfMonth(12).startHour(11).startMinute(11).durationInMinutes(11).build();
 
-    private static void pass(String message) {
+            activity2 = new Activity.ActivityBuilder().route(
+                            new Route.RouteBuilder()
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 10, 10))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 11, 11)).build()
+                    ).gear(new Gear.GearBuilder().type(GearType.ELECTRIC_BIKE).name("N").avgSpeed(120).build()).
+                    startMonth(11).startDayOfMonth(11).startHour(11).startMinute(11).durationInMinutes(11).build();
+        } catch (CoordinateOutOfBoundsException | BlankNameException | NonPositiveSpeedException |
+                 InvalidTimeRangeException | InvalidDurationException e){
+            fail("Unexpected exception thrown: ");
+            e.printStackTrace();
+        }
+
+        var builder = new Profile.ProfileBuilder();
+        Profile profile;
+
+        try{
+            profile = builder.name("Narek").build();
+
+            profile.addActivity(activity1);
+            profile.addActivity(activity2);
+
+            int totalNumSteps = profile.getTotalNumSteps(
+                    LocalDate.of(Year.now().getValue(), Month.NOVEMBER, 15),
+                    ChronoUnit.MONTHS);
+            if(totalNumSteps == 6){
+                pass("Correctly computed the total number of steps.");
+            } else{
+                fail("Computed the total number of steps wrong. Expected 6, got " + totalNumSteps);
+            }
+        }
+        catch (Exception e) {
+            fail("Exception thrown during valid input.");
+            e.printStackTrace();
+        }
+    }
+
+    public void testGetTotalNumbOfStepsWeek(){
+        Activity activity1 = null;
+        Activity activity2 = null;
+        try{
+            activity1 = new Activity.ActivityBuilder().route(
+                            new Route.RouteBuilder()
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 1, 1))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 2, 2))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 3, 3))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 5, 4)).build()
+                    ).gear(new Gear.GearBuilder().type(GearType.ELECTRIC_BIKE).name("N").avgSpeed(120).build()).
+                    startMonth(11).startDayOfMonth(30).startHour(11).startMinute(11).durationInMinutes(11).build();
+
+            activity2 = new Activity.ActivityBuilder().route(
+                            new Route.RouteBuilder()
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 10, 10))
+                                    .withCoordinate(new Coordinate(CoordinateType.ROUTE, 11, 11)).build()
+                    ).gear(new Gear.GearBuilder().type(GearType.ELECTRIC_BIKE).name("N").avgSpeed(120).build()).
+                    startMonth(11).startDayOfMonth(11).startHour(11).startMinute(11).durationInMinutes(11).build();
+        } catch (CoordinateOutOfBoundsException | BlankNameException | NonPositiveSpeedException |
+                 InvalidTimeRangeException | InvalidDurationException e){
+            fail("Unexpected exception thrown: ");
+            e.printStackTrace();
+        }
+
+        var builder = new Profile.ProfileBuilder();
+        Profile profile;
+
+        try{
+            profile = builder.name("Narek").build();
+
+            profile.addActivity(activity1);
+            profile.addActivity(activity2);
+
+            int totalNumSteps = profile.getTotalNumSteps(
+                    LocalDate.of(Year.now().getValue(), Month.NOVEMBER, 11),
+                    ChronoUnit.WEEKS);
+            if(totalNumSteps == 2){
+                pass("Correctly computed the total number of steps.");
+            } else{
+                fail("Computed the total number of steps wrong. Expected 6, got " + totalNumSteps);
+            }
+        }
+        catch (Exception e) {
+            fail("Exception thrown during valid input.");
+            e.printStackTrace();
+        }
+    }
+
+    private void pass(String message) {
         successes++;
         Colourise.green("PASS: " + message + "\n");
     }
 
-    private static void fail(String message) {
+    private void fail(String message) {
         failures++;
 
         Colourise.red("FAIL: " + message + "\n");
     }
 
-    private static void bubblePrint(String message) {
-        try {
-            System.out.println(FigletFont.convertOneLine(message));
-        } catch (IOException ignored) { }
-    }
 }

@@ -1,9 +1,9 @@
 package ca.umanitoba.cs.veranyan.logic;
 
+import ca.umanitoba.cs.comp2450.stack.Stack;
 import ca.umanitoba.cs.veranyan.logic.exceptions.EndCoordOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.logic.exceptions.StartCoordOutOfBoundsException;
 import ca.umanitoba.cs.veranyan.model.Activity;
-import ca.umanitoba.cs.veranyan.model.assets.Stack;
 import ca.umanitoba.cs.veranyan.model.assets.LinkedListStack;
 import ca.umanitoba.cs.veranyan.model.Profile;
 import ca.umanitoba.cs.veranyan.model.map.Map;
@@ -14,7 +14,6 @@ import com.google.common.base.Preconditions;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * {@link PathFinder} manages the business logic of finding a path on the {@link Map} using the given routes
