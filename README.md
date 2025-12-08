@@ -1,7 +1,7 @@
 * Title: Track-Me-Riding
 * Author: Narek Veranyan (veranyan@myumanitoba.ca)
 * Student number: 8040209
-* Date: November 19, 2025
+* Date: December 7, 2025
 ---
 
 # Overview
@@ -11,23 +11,80 @@
 >   * Multiple profiles in the system that can share routes and view each other's activities,
 >   * A feed of activities with each route displayed on a user-defined grid-structured map, 
 >   * There are routes and obstacles that can be added to the map,
->   * There are gears to be added and later used in an activity.
+>   * There are gears to be added and later used in an activity,
+>   * Persistence for user progress,
+>   * A rigorous test suite for all the layers and domain model objects. 
 
 ## Vision Statement
-> Build software that allows exercises to track exercises
-> over a map, share information about their exercises,
-> and measure performance over time.
+> Build software that allows exercisers to track their activities
+> over a map, share information about them, and measure performance over time.
+
+---
+
+---
+
 
 ## Running
 This project was built using Maven and developed in IntelliJ IDEA.
-It can be run using several options:
 
+## 1 - Running The Functional Application
 1. Open the `Main.java` class and click the green play button 
-    in the top right corner.
-2. Run Maven on the command line:
+    in the top-right corner.
+2. Or, run Maven on the command line:
     ```
     mvn compile exec:java -Dexec.mainClass="ca.umanitoba.cs.veranyan.Main"   
     ```
+---
+## 2 - Launching The Test Suite
+Open the `TestHarness.java` class and click the green play button
+in the top-right corner.
+
+---
+
+# Testing the Stack
+
+| Method    | Data                                                           | Expected outcome                                                                                                                    |
+|-----------|----------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| push()    | empty stack, "first"                                           | size() returns 1 <br/> isEmpty() returns false <br/> peek() returns first <br/> pop() returns first                                 |
+| push()    | empty stack, "a", "b", "c", "d"                                | size() returns 4 <br/> isEmpty() returns false <br/> peek() returns d <br/> pop() returns d <br/> peek() returns c                  |
+| push()    | stack filled with ["a", "b", "c", "d">, pop x 1, then push "k" | size() returns 4 <br/> isEmpty() returns false <br/> peek() returns k <br/> pop() returns k <br/> peek() returns c                  |
+| push()    | stack filled with ["a", "b", "c", "d">, pop x 4, then push "k" | size() returns 1 <br/> isEmpty() returns false <br/> peek() returns k <br/> pop() returns k                                         |                                                                                                                            |
+| isEmpty() | empty stack                                                    | returns true                                                                                                                        |
+| size()    | empty stack                                                    | returns 0                                                                                                                           |
+| pop()     | stack filled with ["a", "b", "c", "d">                         | pop() returns d <br/> size() returns 3 <br/> isEmpty() returns false <br/> peek() returns c                                         |
+| pop()     | stack filled with ["a", "b", "c", "d">                         | pop() returns d <br/> pop() returns c <br/> pop() returns b <br/> pop() returns a <br/> size returns 0 <br/> isEmpty() returns true |
+| pop()     | empty stack                                                    | throws an EmptyStackException                                                                                                       |
+| pop()     | stack filled with ["a", "b", "c">, pop x 4                     | throws an EmptyStackException                                                                                                       |
+| peek()    | empty stack                                                    | throws an EmptyStackException                                                                                                       |
+| peek()    | stack filled with ["a", "b", "c">, pop x 3, then peek          | throws an EmptyStackException                                                                                                       |
+
+## Report on Franklin's BadStacks 
+
+* `BadStack1` - My test suite showed that:
+  * `isEmpty` always returns `true`, which is for the reason that
+     it maps all the elements to `0`, which sum to `0` 
+  * `peek` always throws `EmptyStackException` because it tries to get an
+     entry from `var3`, which is always empty (since the loop never runs)
+  * `pop` always throws `EmptyStackException`. For the reason that `isEmpty` is always true,
+     it enters the else block, where var2 is 0 (for the reason that the loop is run and reduces it to 0)
+  * The rest of the methods work correct according to the test suite
+* `BadStack2` - My test suite showed that:
+  * `pop`, even if it retrieves the top, does not remove it afterwards.
+  * The rest of the methods work correct according to the test suite
+* `BadStack3` - My test suite showed that:
+  * When the stack is non-empty, `size` returns one less than the actual number of entries
+    because it subtracts 1 from `var1` (reduces size by 1), so the loop that should increment `var2`
+    enough does it with one less
+  * The rest of the methods work correct according to the test suite
+* `BadStack4` - My test suite showed that:
+  * `peek` empties the stack after call, for the reason that it iteratively removes the entries
+    from the stack in a loop until it is empty, after which the stack is never filled back with those entries
+  * The rest of the methods work correct according to the test suite
+* `BadStack5` - My test suite showed that:
+  * All the methods work correct according to the test suite
+
+---
+
 # User Flow Diagram
 
 ### main menu
@@ -284,59 +341,13 @@ Here's my updated diagram for my domain model:
 > changes:
 > 
 > ### Profile
-> 1. Exerciser class renamed Profile
-> 2. Removed the map attribute, thus removing the composition relationship between Profile and Map
-> 3. Removed accessors and mutators for the map attribute
-> 4. Added name, gears, activities, and friends attributes to Profile
-> 5. Thus added a composition relationship between Profile and Activities, and an aggregation relationship with itself
-> 6. Added relevant accessors and mutators for the new attributes
-> 7. Added getRoutes() method
-> 8. Added follow() and unfollow() methods
-> 9. Added getNumbOfSteps() method
-> 10. changed method addGear(GearType, String, double) to addGear(Gear)  
-> 11. changed invariants accordingly
+> - removed `removeActivity` and `getRoutes` methods
 > 
 > ### Map
-> 1. made width and length attributes static
-> 2. Added grid attribute, thus adding a composition relationship between Map and CoordinateType
-> 3. Added grid appending / refilling / clearing methods
-> 4. Added grid per coordinate mutators
-> 5. Changed Map::addObstacle(int, int, int, int) void to Map::addObstacle(Obstacle) void
-> 6. Replaced activities with routes attribute, thus removing the composition relationship between Map and Activities and adding an aggregation relationship between Map and Routes
-> 7. Removed accessors and mutators for activities
-> 8. Removed isInRoute(), isInObstacle() methods
-> 9. Removed getNumbOfSteps() method
-> 10. Added accessors and mutators for routes and processed routes
-> 11. changed invariants accordingly
-> 
-> ### Activity
-> 1. removed the avgSpeed attribute
-> 2. removed Activity::endActivity() method
-> 3. changed invariants accordingly
-> 
-> ### Route
-> 1. made Route implement MapFeature
-> 2. replaced getStepsAmount() with getMeasure()
-> 3. removed getCoordinate() method
-> 4. added addCoordinate() method
-> 5. changed invariants accordingly
-> 
-> ### Obstacle
-> 1. removed topLeftCoord and bottomRightCoord attributes
-> 2. added coordinates attribute
-> 3. made Obstacle implement MapFeature
-> 4. added GetCoordinates() and getMeasure() methods
-> 5. changed invariants accordingly
-> 
-> ### Coordinate
-> 1. added type attribute, thus adding a composition relationship between Coordinate and CoordinateType
-> 2. added getLeft(), getRight(), getAbove(), getBelow(), getNeighbours(), and isNeighbourOf() methods
-> 3. changed invariants accordingly
-> 
-> ### Additional
-> 1. added a MapFeature interface that Route and Obstacle implement
-> 2. added a CoordinateType class
-> 
+> - removed `removeObstacle` method
+> - replaced `addProcessedRoute` method with `addActivity`
+> - added `addActivities` method
+> - renamed `appendToGrid` method to `addToGrid`
 
 ```mermaid 
 classDiagram
@@ -354,11 +365,9 @@ classDiagram
         +getTotalNumSteps(LocalDate, ChronoUnit) int
         +getActivities(int, int) SortedSet~Activity~
         +addActivity(Activity) void
-        +removeActivity(int) void
         +getFriends() Set~Profile~
         +follow(Profile) void
         +unfollow(Profile) void
-        +getRoutes() List~ProcessedRoute~
     }
     
     note for Profile"invariants:
@@ -411,12 +420,12 @@ classDiagram
         +setCoordinateType(int, int) void
         +getObstacles() List~Obstacle~
         +addObstacle(Obstacle) void
-        +removeObstacle(int) void
         +addRoute(Route) ProcessedRoute
-        +addProcessedRoute(ProcessedRoute) void
+        +addActivity(Activity) void
+        +addActivities(List~Activity~) void
         +addProcessedRoutes(List~ProcessedRoute~) void
         +clearRoutes() void
-        +appendToGrid(MapFeature) void
+        +addToGrid(MapFeature) void
         +refillGrid() void
     }
     
@@ -529,4 +538,22 @@ classDiagram
         CURRENT,
         BORDER
     }
+
+    class LinkedListStack~T~ {
+        -T placeholder
+        -Node top
+        -int size
+
+        +push(T) void
+        +pop() T
+        +peek() T
+        +size() int
+        +isEmpty() boolean
+    }
+
+    note for LinkedListStack "invariants:
+        placeholder != null
+        top != null
+        size >= 0
+    "
 ```

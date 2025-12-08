@@ -130,19 +130,6 @@ public class Map{
     }
 
     /**
-     * Removes an Obstacle from the Map by index.
-     * @param index the index of the Obstacle to remove.
-     */
-    public void removeObstacle(int index){
-        checkMap();
-
-        obstacles.remove(index);
-        refillGrid();
-
-        checkMap();
-    }
-
-    /**
      * Adds a {@link Route} to the {@link Map}
      * @param route the {@link Route} to add
      * @throws RouteObstacleOverlapException if {@code route} overlaps with any of the existing obstacles

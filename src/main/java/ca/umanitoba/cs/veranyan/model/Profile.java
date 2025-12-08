@@ -198,24 +198,6 @@ public class Profile implements Cloneable {
     }
 
     /**
-     * Removes an activity from the Map by index.
-     * @param index the index of the activity to remove.
-     */
-    public void removeActivity(int index) {
-        checkProfile();
-
-        Iterator<Activity> iterator = activities.iterator();
-
-        // omitting previous elements to reach element at appropriate index;
-        for(int j = 0; j < index; j++)
-            iterator.next();
-
-        activities.remove(iterator.next());
-
-        checkProfile();
-    }
-
-    /**
      * @return the set of all friend profiles for the {@link Profile}
      */
     public Set<Profile> getFriends() {
@@ -356,43 +338,6 @@ public class Profile implements Cloneable {
             return this;
         }
 
-//        /**
-//         * Adds a {@link Gear} for the {@link Profile} to build
-//         * @param gear the {@link Gear} of the {@link Profile}
-//         * @return the builder instance
-//         * @throws DuplicateGearException if the {@code gear} has same name as existing {@link Gear}
-//         * @implNote this method is optional for building a {@link Profile}
-//         */
-//        public ProfileBuilder withGear(Gear gear) throws DuplicateGearException {
-//            Preconditions.checkNotNull(gear, "gear cannot be null");
-//
-//            boolean isAdded = gears.add(gear);
-//
-//            if(!isAdded)
-//                throw new DuplicateGearException();
-//
-//            return this;
-//        }
-
-//        /**
-//         * Adds an {@link Activity} for the {@link Profile} to build
-//         * @param activity the {@link Activity} of the {@link Profile}
-//         * @return the builder instance
-//         * @throws DuplicateActivityException if {@code activity} has the same start date as an existing {@link Activity}
-//         * @implNote this method is optional for building a {@link Profile}
-//         */
-//        public ProfileBuilder withActivity(Activity activity) throws DuplicateActivityException {
-//            Preconditions.checkNotNull(activity, "activity cannot be null");
-//
-//            boolean isAdded = activities.add(activity);
-//
-//            if(!isAdded)
-//                throw new DuplicateActivityException();
-//
-//            return this;
-//        }
-
-        // FIXME can I have multiple builders?
         /**
          * Builds the {@link Profile} without gears or activities
          * @return the new {@link Profile}
@@ -402,24 +347,5 @@ public class Profile implements Cloneable {
 
             return new Profile(name);
         }
-
-//        /**
-//         * Builds the {@link Profile} with gears and activities
-//         * @return the new {@link Profile}
-//         * @throws DuplicateGearException if a {@link Gear} of the {@link Profile} has duplicates
-//         * @throws DuplicateActivityException if an {@link Activity} of the {@link Profile} has duplicates
-//         */
-//        public Profile buildWithActivityGear() throws DuplicateGearException, DuplicateActivityException {
-//            Preconditions.checkNotNull(name, "name cannot be null");
-//            Profile profile = new Profile(name);
-//
-//            for(var gear : gears)
-//                profile.addGear(gear);
-//
-//            for(var activity : activities)
-//                profile.addActivity(activity);
-//
-//            return profile;
-//        }
     }
 }
