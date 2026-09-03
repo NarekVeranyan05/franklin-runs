@@ -1,11 +1,11 @@
-* Title: Track-Me-Riding
+* Title: Franklin Runs
 * Author: Narek Veranyan (veranyan@myumanitoba.ca)
 * Student number: 8040209
 * Date: October __, 2025
 ---
 
 # Overview
-> Track-Me-Riding is an implementation of an exercise tracker software for COMP 2450 
+> Franklin Runs is an implementation of an exercise tracker software for COMP 2450 
 > specifically designed for tracking cycling activities. The software offers
 >
 >   * A user-defined grid-structured map to track an activity.
@@ -23,14 +23,20 @@
 
 ## Running
 This project was built using Maven and developed in IntelliJ IDEA.
-The project can be run using several options:
+To run this program, follow these steps:
 
-1. Open the `Main.java` class and click the green play button 
-    in the top right corner.
-2. Run Maven on the command line:
-    ```
-    mvn compile exec:java -Dexec.mainClass="ca.umanitoba.cs.veranyan.Main"   
-    ```
+1. Open a terminal in the project directory.
+
+2. Compile the source files with javac:
+```
+javac -d out src/main/java/ca/umanitoba/cs/veranyan/Main.java
+```
+
+3. Run the compiled application:
+```
+java -cp out ca.umanitoba.cs.veranyan.Main
+```
+
 # User Flow Diagram
 
 ### log-in and sign-up
