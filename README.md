@@ -23,18 +23,23 @@
 
 ## Running
 This project was built using Maven and developed in IntelliJ IDEA.
-To run this program, follow these steps:
 
-1. Open a terminal in the project directory.
+* Prerequisites to run the program:
+    1. Java JDK 21 or newer
+    2. Apache Maven
 
-2. Compile the source files with javac:
+* Setup
+1. Install the Java JDK if it is not already installed.
+2. Install Apache Maven and make sure the mvn command is available from your terminal.
+3. Verify that both are installed:
 ```
-javac -d out src/main/java/ca/umanitoba/cs/veranyan/Main.java
+java --version
+mvn --version
 ```
-
-3. Run the compiled application:
+4. Open a terminal in the project directory.
+5. Compile and run the application:
 ```
-java -cp out ca.umanitoba.cs.veranyan.Main
+mvn compile exec:java -Dexec.mainClass="ca.umanitoba.cs.veranyan.Main"
 ```
 
 # User Flow Diagram
