@@ -12,8 +12,8 @@ public class ActivityPrinter {
     private final Activity activity;
 
     /**
-     * Constructor for the Activity.
-     * @param activity the Activity to be printed. Must not be {@code null}.
+     * Constructor for the {@link Activity}.
+     * @param activity the {@link Activity} to be printed. Must not be {@code null}.
      */
     public ActivityPrinter(Activity activity) {
         this.activity = activity;
@@ -22,14 +22,14 @@ public class ActivityPrinter {
     }
 
     /**
-     * Prints out an Activity. This method prints to standard output (`System.out`).
+     * Prints out an {@link Activity}. This method prints to standard output (`System.out`).
      */
     public void print() {
         checkActivityPrinter();
 
         System.out.print("Activity start = " + activity.getStart() +
                 " | end = " + activity.getEnd() + " | distance passed = " +
-                (activity.getRoute().getStepsAmount() * METERS_PER_STEP) + " meters | average speed = " +
+                (activity.getRoute().getMeasure() * METERS_PER_STEP) + " meters | average speed = " +
                 activity.getAvgSpeed() + " meters per second.\n");
 
         // gear info
@@ -42,7 +42,7 @@ public class ActivityPrinter {
     }
 
     /**
-     * Ensures ActivityPrinter invariants are not violated.
+     * Ensures {@link ActivityPrinter} invariants are not violated.
      */
     private void checkActivityPrinter(){
         Preconditions.checkNotNull(activity, "activity cannot be null");
