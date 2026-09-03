@@ -37,7 +37,7 @@ mvn --version
 4. Open a terminal in the project directory.
 5. Compile and run the application:
 ```
-mvn compile exec:java -Dexec.mainClass="ca.umanitoba.cs.veranyan.Main"
+mvn compile exec:java "-Dexec.mainClass=ca.umanitoba.cs.veranyan.Main"
 ```
 
 # User Flow Diagram
