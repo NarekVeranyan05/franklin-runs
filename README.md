@@ -11,9 +11,8 @@
 >   * There are gears to be recorded and later added to an activity.
 
 ## Vision Statement
-> Build software that allows exercises to track exercises
-> over a map, share information about their exercises,
-> and measure performance over time.
+> Build software that allows exercises to track activities and gear, record obstacles,
+> share exercise information with friends, and find routes on a map.
 
 ## Resources
 * used the following existing system to come up with classes in the domain model: <https://www.strava.com/>
