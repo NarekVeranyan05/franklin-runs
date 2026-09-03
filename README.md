@@ -1,7 +1,5 @@
 * Title: Franklin Runs
 * Author: Narek Veranyan (veranyan@myumanitoba.ca)
-* Student number: 8040209
-* Date: October __, 2025
 ---
 
 # Overview
